@@ -326,6 +326,9 @@ struct NodeDetail: View {
 									node: node
 								)
 							}
+							if (node.hasPositions){
+								NavigateToButton(node: node)
+							}
 							DeleteNodeButton(
 								bleManager: bleManager,
 								context: context,
