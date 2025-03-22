@@ -15,6 +15,7 @@ struct MapSettingsForm: View {
 	@AppStorage("meshMapShowRouteLines") private var routeLines = false
 	@AppStorage("enableMapConvexHull") private var convexHull = false
 	@AppStorage("enableMapWaypoints") private var waypoints = true
+	@Binding var userLocation: Bool
 	@Binding var traffic: Bool
 	@Binding var pointsOfInterest: Bool
 	@Binding var mapLayer: MapLayer
@@ -97,6 +98,9 @@ struct MapSettingsForm: View {
 					}
 					Toggle(isOn: $pointsOfInterest) {
 						Label("Points of Interest", systemImage: "mappin.and.ellipse")
+					}
+					Toggle(isOn: $userLocation) {
+						Label("Show user location", systemImage: "location.north.fill")
 					}
 					.toggleStyle(SwitchToggleStyle(tint: .accentColor))
 					.onTapGesture {

@@ -64,6 +64,10 @@ struct MeshMap: View {
 						bounds: MapCameraBounds(minimumDistance: 1, maximumDistance: .infinity),
 						scope: mapScope
 					) {
+						if showUserLocation {
+							UserAnnotation()
+						}
+						
 						MeshMapContent(
 							showUserLocation: $showUserLocation,
 							showTraffic: $showTraffic,
@@ -134,7 +138,7 @@ struct MeshMap: View {
 					.padding()
 			}
 			.sheet(isPresented: $editingSettings) {
-				MapSettingsForm(traffic: $showTraffic, pointsOfInterest: $showPointsOfInterest, mapLayer: $selectedMapLayer, meshMap: $isMeshMap)
+				MapSettingsForm(userLocation: $showUserLocation, traffic: $showTraffic, pointsOfInterest: $showPointsOfInterest, mapLayer: $selectedMapLayer, meshMap: $isMeshMap)
 			}
 			.onChange(of: router.navigationState) {
 				guard case .map = router.navigationState.selectedTab else { return }

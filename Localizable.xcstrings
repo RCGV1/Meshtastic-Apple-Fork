@@ -11931,6 +11931,7 @@
       }
     },
     "Hops Away:" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -15962,6 +15963,7 @@
       }
     },
     "Logs:" : {
+      "extractionState" : "stale",
       "localizations" : {
         "sr" : {
           "stringUnit" : {
@@ -24942,6 +24944,7 @@
       }
     },
     "Role: %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
