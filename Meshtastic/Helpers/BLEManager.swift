@@ -952,7 +952,7 @@ class BLEManager: NSObject, CBPeripheralDelegate, MqttClientProxyManagerDelegate
 								subtitle: "TR received back from \(destinationHop.name ?? "unknown")",
 								content: "Hops from: \(tr.hopsTowards), Hops back: \(tr.hopsBack)\n\(tr.routeText ?? "unknown".localized)\n\(tr.routeBackText ?? "unknown".localized)",
 								target: "nodes",
-								path: "meshtastic:///nodes?nodenum=\(connectedNode.user?.num ?? 0)"
+								path: "meshtastic:///nodes?nodenum=\(destinationHop.num)"
 							)
 						]
 						manager.schedule()
