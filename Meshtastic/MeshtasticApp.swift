@@ -40,6 +40,8 @@ struct MeshtasticAppleApp: App {
 		self.appDelegate.router = appState.router
 		// Show Tips
 		try? Tips.resetDatastore()
+		
+		// Initialize WatchCommunicationManager
 	}
 
     var body: some Scene {
