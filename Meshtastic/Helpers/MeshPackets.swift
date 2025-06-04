@@ -698,6 +698,37 @@ func routingPacket (packet: MeshPacket, connectedNodeNum: Int64, context: NSMana
 			}
 			try context.save()
 			Logger.data.info("💾 ACK Saved for Message: \(packet.decoded.requestID, privacy: .public)")
+			
+			if(fetchedMessage[0].realACK){
+				if fetchedMessage[0].messagePayload == "ping" {
+					let packetUsers = UserEntity.fetchRequest()
+					packetUsers.predicate = NSPredicate(format: "num IN %@", [packet.to, packet.from])
+					do {
+						let fetchedUsers = try context.fetch(packetUsers)
+						var modemPreset: ModemPresets = ModemPresets(
+							rawValue: UserDefaults.modemPreset
+						) ?? ModemPresets.longFast
+						let signalStrength = getLoRaSignalStrength(snr: fetchedMessage[0].ackSNR, rssi: packet.rxRssi, preset: modemPreset)
+						if fetchedUsers.first(where: { $0.num == packet.from }) != nil {
+							let fromUser =  fetchedUsers.first(where: { $0.num == packet.from })
+							let manager = LocalNotificationManager()
+							manager.notifications = [
+								Notification(
+									id: ("notification.id.\(UUID().uuidString)"),
+									title: "Ping Acked from \(fromUser?.longName ?? "UNK")",
+									subtitle: "AKA \(fromUser?.shortName ?? "UNK")",
+									content: "Returned SNR: \(fetchedMessage[0].ackSNR) , Signal Strength: \(signalStrength)",
+									target: "nodes"
+								)
+							]
+							manager.schedule()
+						}
+					}
+				}
+
+				
+			}
+			
 		} catch {
 			context.rollback()
 			let nsError = error as NSError

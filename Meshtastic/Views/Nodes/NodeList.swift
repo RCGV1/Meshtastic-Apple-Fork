@@ -102,6 +102,12 @@ struct NodeList: View {
 					}) {
 						Label("Message", systemImage: "message")
 					}
+				} else {
+					Button{
+						BLEManager.shared.sendMessage(message: "ping", toUserNum: node.num, channel: 0, isEmoji: false, replyID: 0)
+					} label: {
+						Label("Ping Node", systemImage: "bell.and.waves.left.and.right.fill")
+					}
 				}
 				TraceRouteButton(
 					bleManager: bleManager,

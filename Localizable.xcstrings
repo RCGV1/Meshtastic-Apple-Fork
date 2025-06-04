@@ -21868,6 +21868,9 @@
         }
       }
     },
+    "Ping Node" : {
+
+    },
     "PKI based node administration, requires firmware version 2.5+" : {
       "localizations" : {
         "de" : {
