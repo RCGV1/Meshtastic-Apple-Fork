@@ -504,7 +504,7 @@ class BLEManager: NSObject, CBPeripheralDelegate, MqttClientProxyManagerDelegate
 	
 		
        private var connectionTimeoutTimer: Timer?
-	   private let connectionTimeoutInterval: TimeInterval = 10.0
+	   private let connectionTimeoutInterval: TimeInterval = 5.0
 	   private var wantConfigRetryCount = 0
 	   private let maxWantConfigRetries = 3
 	   private var isWaitingForConfigComplete = false
@@ -532,9 +532,6 @@ class BLEManager: NSObject, CBPeripheralDelegate, MqttClientProxyManagerDelegate
 		   if isWaitingForConfigComplete {
 			   Logger.services.warning("🔄 [BLE] No config complete response, attempting retry")
 			   retryWantConfig()
-		   } else {
-			   Logger.services.error("🚫 [BLE] Connection timeout - disconnecting device")
-			   disconnectPeripheral()
 		   }
 	   }
 	   
@@ -548,14 +545,12 @@ class BLEManager: NSObject, CBPeripheralDelegate, MqttClientProxyManagerDelegate
 		   
 		   wantConfigRetryCount += 1
 		   Logger.services.info("🔄 [BLE] Retrying WantConfig attempt \(self.wantConfigRetryCount)/\(self.maxWantConfigRetries)")
-		   
-		   // Wait a brief moment before retry
-		   DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-			   self?.sendWantConfig(isRetry: true)
-		   }
+			   self.sendWantConfig(isRetry: true)
 	   }
 	   
 	func sendWantConfig(isRetry: Bool) {
+		stopConnectionTimeout()
+		
 		  guard connectedPeripheral?.peripheral.state ?? CBPeripheralState.disconnected == CBPeripheralState.connected else {
 			  Logger.services.error("🚫 [BLE] Cannot send WantConfig - not connected")
 			  return
@@ -570,11 +565,9 @@ class BLEManager: NSObject, CBPeripheralDelegate, MqttClientProxyManagerDelegate
 		  let nodeName = connectedPeripheral?.peripheral.name ?? "Unknown".localized
 		  let logString = String.localizedStringWithFormat("Issuing Want Config to %@ (Attempt \(wantConfigRetryCount + 1))".localized, nodeName)
 		  Logger.mesh.info("🛎️ \(logString, privacy: .public)")
-		if !isRetry {
 			// Set up timeout and state tracking
 			startConnectionTimeout()
 			isWaitingForConfigComplete = true
-		}
 
 		  
 		  // BLE Characteristics discovered, issue wantConfig
@@ -588,9 +581,8 @@ class BLEManager: NSObject, CBPeripheralDelegate, MqttClientProxyManagerDelegate
 			  isWaitingForConfigComplete = false
 			  return
 		  }
-		if isRetry {
+
 			connectedPeripheral!.peripheral.writeValue(binaryData, for: TORADIO_characteristic, type: .withResponse)
-		}
 		  
 		  // Either Read the config complete value or from num notify value
 		  guard connectedPeripheral != nil else {
@@ -598,7 +590,7 @@ class BLEManager: NSObject, CBPeripheralDelegate, MqttClientProxyManagerDelegate
 			  isWaitingForConfigComplete = false
 			  return
 		  }
-		  connectedPeripheral!.peripheral.readValue(for: FROMRADIO_characteristic)
+		connectedPeripheral!.peripheral.readValue(for: FROMRADIO_characteristic)
 	  }
 
 	func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
@@ -790,6 +782,7 @@ class BLEManager: NSObject, CBPeripheralDelegate, MqttClientProxyManagerDelegate
 				}
 				// Config
 				if decodedInfo.config.isInitialized && !invalidVersion && connectedPeripheral != nil {
+					stopConnectionTimeout()
 					nowKnown = true
 					localConfig(config: decodedInfo.config, context: context, nodeNum: Int64(truncatingIfNeeded: self.connectedPeripheral.num), nodeLongName: self.connectedPeripheral.longName)
 				}
@@ -851,7 +844,6 @@ class BLEManager: NSObject, CBPeripheralDelegate, MqttClientProxyManagerDelegate
 			case .waypointApp:
 				waypointPacket(packet: decodedInfo.packet, context: context)
 			case .nodeinfoApp:
-				stopConnectionTimeout()
 				if !invalidVersion { upsertNodeInfoPacket(packet: decodedInfo.packet, context: context) }
 			case .routingApp:
 				if !invalidVersion { routingPacket(packet: decodedInfo.packet, connectedNodeNum: self.connectedPeripheral.num, context: context) }
