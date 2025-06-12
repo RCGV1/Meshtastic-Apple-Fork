@@ -177,6 +177,7 @@ class BLEManager: NSObject, CBPeripheralDelegate, MqttClientProxyManagerDelegate
 
 	// Disconnect Connected Peripheral
 	func disconnectPeripheral(reconnect: Bool = true) {
+		stopConnectionTimeout()
 		// Ensure all operations run on the main thread
 		DispatchQueue.main.async { [weak self] in
 			guard let self = self else { return }
@@ -318,54 +319,58 @@ class BLEManager: NSObject, CBPeripheralDelegate, MqttClientProxyManagerDelegate
 
 	// MARK: Discover Characteristics Event
 	func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
+		 
+		 if let error {
+			 Logger.services.error("🚫 [BLE] Discover Characteristics error for \(peripheral.name ?? "Unknown", privacy: .public) \(error.localizedDescription, privacy: .public) disconnecting device")
+			 stopConnectionTimeout()
+			 disconnectPeripheral()
+			 return
+		 }
 
-		if let error {
-			Logger.services.error("🚫 [BLE] Discover Characteristics error for \(peripheral.name ?? "Unknown", privacy: .public) \(error.localizedDescription, privacy: .public) disconnecting device")
-			// Try and stop crashes when this error occurs
-			disconnectPeripheral()
-			return
-		}
+		 guard let characteristics = service.characteristics else { return }
 
-		guard let characteristics = service.characteristics else { return }
+		 for characteristic in characteristics {
+			 switch characteristic.uuid {
+			 case TORADIO_UUID:
+				 Logger.services.info("✅ [BLE] did discover TORADIO characteristic for Meshtastic by \(peripheral.name ?? "Unknown", privacy: .public)")
+				 TORADIO_characteristic = characteristic
 
-		for characteristic in characteristics {
-			switch characteristic.uuid {
+			 case FROMRADIO_UUID:
+				 Logger.services.info("✅ [BLE] did discover FROMRADIO characteristic for Meshtastic by \(peripheral.name ?? "Unknown", privacy: .public)")
+				 FROMRADIO_characteristic = characteristic
+				 peripheral.readValue(for: FROMRADIO_characteristic)
 
-			case TORADIO_UUID:
-				Logger.services.info("✅ [BLE] did discover TORADIO characteristic for Meshtastic by \(peripheral.name ?? "Unknown", privacy: .public)")
-				TORADIO_characteristic = characteristic
+			 case FROMNUM_UUID:
+				 Logger.services.info("✅ [BLE] did discover FROMNUM (Notify) characteristic for Meshtastic by \(peripheral.name ?? "Unknown", privacy: .public)")
+				 FROMNUM_characteristic = characteristic
+				 peripheral.setNotifyValue(true, for: characteristic)
 
-			case FROMRADIO_UUID:
-				Logger.services.info("✅ [BLE] did discover FROMRADIO characteristic for Meshtastic by \(peripheral.name ?? "Unknown", privacy: .public)")
-				FROMRADIO_characteristic = characteristic
-				peripheral.readValue(for: FROMRADIO_characteristic)
+			 case LEGACY_LOGRADIO_UUID:
+				 Logger.services.info("✅ [BLE] did discover legacy LOGRADIO (Notify) characteristic for Meshtastic by \(peripheral.name ?? "Unknown", privacy: .public)")
+				 LEGACY_LOGRADIO_characteristic = characteristic
+				 peripheral.setNotifyValue(true, for: characteristic)
 
-			case FROMNUM_UUID:
-				Logger.services.info("✅ [BLE] did discover FROMNUM (Notify) characteristic for Meshtastic by \(peripheral.name ?? "Unknown", privacy: .public)")
-				FROMNUM_characteristic = characteristic
-				peripheral.setNotifyValue(true, for: characteristic)
+			 case LOGRADIO_UUID:
+				 Logger.services.info("✅ [BLE] did discover LOGRADIO (Notify) characteristic for Meshtastic by \(peripheral.name ?? "Unknown", privacy: .public)")
+				 LOGRADIO_characteristic = characteristic
+				 peripheral.setNotifyValue(true, for: characteristic)
 
-			case LEGACY_LOGRADIO_UUID:
-				Logger.services.info("✅ [BLE] did discover legacy LOGRADIO (Notify) characteristic for Meshtastic by \(peripheral.name ?? "Unknown", privacy: .public)")
-				LEGACY_LOGRADIO_characteristic = characteristic
-				peripheral.setNotifyValue(true, for: characteristic)
-
-			case LOGRADIO_UUID:
-				Logger.services.info("✅ [BLE] did discover LOGRADIO (Notify) characteristic for Meshtastic by \(peripheral.name ?? "Unknown", privacy: .public)")
-				LOGRADIO_characteristic = characteristic
-				peripheral.setNotifyValue(true, for: characteristic)
-
-			default:
-				break
-			}
-		}
-		if ![FROMNUM_characteristic, TORADIO_characteristic].contains(nil) {
-			if mqttProxyConnected {
-				mqttManager.mqttClientProxy?.disconnect()
-			}
-			sendWantConfig()
-		}
-	}
+			 default:
+				 break
+			 }
+		 }
+		 
+		 // Start timeout when we're ready to send WantConfig
+		 if ![FROMNUM_characteristic, TORADIO_characteristic].contains(nil) {
+			 if mqttProxyConnected {
+				 mqttManager.mqttClientProxy?.disconnect()
+			 }
+			 
+			 // Reset retry count for new connection attempt
+			 wantConfigRetryCount = 0
+			 sendWantConfig(isRetry: false)
+		 }
+	 }
 
 	// MARK: MqttClientProxyManagerDelegate Methods
 	func onMqttConnected() {
@@ -496,32 +501,105 @@ class BLEManager: NSObject, CBPeripheralDelegate, MqttClientProxyManagerDelegate
 		}
 		return success
 	}
+	
+		
+       private var connectionTimeoutTimer: Timer?
+	   private let connectionTimeoutInterval: TimeInterval = 10.0
+	   private var wantConfigRetryCount = 0
+	   private let maxWantConfigRetries = 3
+	   private var isWaitingForConfigComplete = false
+	   
+	   
+	   private func startConnectionTimeout() {
+		   stopConnectionTimeout() // Clear any existing timer
+		   
+		   connectionTimeoutTimer = Timer.scheduledTimer(withTimeInterval: connectionTimeoutInterval, repeats: false) { [weak self] _ in
+			   self?.handleConnectionTimeout()
+		   }
+		   
+		   Logger.services.info("🔄 [BLE] Connection timeout timer started for \(self.connectionTimeoutInterval) seconds")
+	   }
+	   
+	   private func stopConnectionTimeout() {
+		   connectionTimeoutTimer?.invalidate()
+		   connectionTimeoutTimer = nil
+		   isWaitingForConfigComplete = false
+	   }
+	   
+	   private func handleConnectionTimeout() {
+		   Logger.services.warning("⏰ [BLE] Connection timeout occurred after \(self.connectionTimeoutInterval) seconds")
+		   
+		   if isWaitingForConfigComplete {
+			   Logger.services.warning("🔄 [BLE] No config complete response, attempting retry")
+			   retryWantConfig()
+		   } else {
+			   Logger.services.error("🚫 [BLE] Connection timeout - disconnecting device")
+			   disconnectPeripheral()
+		   }
+	   }
+	   
+	   
+	   private func retryWantConfig() {
+		   guard wantConfigRetryCount < maxWantConfigRetries else {
+			   Logger.services.error("🚫 [BLE] Max WantConfig retries reached (\(self.maxWantConfigRetries)) - disconnecting")
+			   disconnectPeripheral()
+			   return
+		   }
+		   
+		   wantConfigRetryCount += 1
+		   Logger.services.info("🔄 [BLE] Retrying WantConfig attempt \(self.wantConfigRetryCount)/\(self.maxWantConfigRetries)")
+		   
+		   // Wait a brief moment before retry
+		   DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+			   self?.sendWantConfig(isRetry: true)
+		   }
+	   }
+	   
+	func sendWantConfig(isRetry: Bool) {
+		  guard connectedPeripheral?.peripheral.state ?? CBPeripheralState.disconnected == CBPeripheralState.connected else {
+			  Logger.services.error("🚫 [BLE] Cannot send WantConfig - not connected")
+			  return
+		  }
 
-	func sendWantConfig() {
-		guard connectedPeripheral?.peripheral.state ?? CBPeripheralState.disconnected == CBPeripheralState.connected else { return }
-
-		if FROMRADIO_characteristic == nil {
-			Logger.mesh.error("🚨 \("Unsupported Firmware Version Detected, unable to connect to device.".localized, privacy: .public)")
-			invalidVersion = true
-			return
-		} else {
-
-			let nodeName = connectedPeripheral?.peripheral.name ?? "Unknown".localized
-			let logString = String.localizedStringWithFormat("Issuing Want Config to %@".localized, nodeName)
-			Logger.mesh.info("🛎️ \(logString, privacy: .public)")
-			// BLE Characteristics discovered, issue wantConfig
-			var toRadio: ToRadio = ToRadio()
-			configNonce += 1
-			toRadio.wantConfigID = configNonce
-			guard let binaryData: Data = try? toRadio.serializedData() else {
-				return
-			}
-			connectedPeripheral!.peripheral.writeValue(binaryData, for: TORADIO_characteristic, type: .withResponse)
-			// Either Read the config complete value or from num notify value
-			guard connectedPeripheral != nil else { return }
-			connectedPeripheral!.peripheral.readValue(for: FROMRADIO_characteristic)
+		  if FROMRADIO_characteristic == nil {
+			  Logger.mesh.error("🚨 \("Unsupported Firmware Version Detected, unable to connect to device.".localized, privacy: .public)")
+			  invalidVersion = true
+			  return
+		  }
+		
+		  let nodeName = connectedPeripheral?.peripheral.name ?? "Unknown".localized
+		  let logString = String.localizedStringWithFormat("Issuing Want Config to %@ (Attempt \(wantConfigRetryCount + 1))".localized, nodeName)
+		  Logger.mesh.info("🛎️ \(logString, privacy: .public)")
+		if !isRetry {
+			// Set up timeout and state tracking
+			startConnectionTimeout()
+			isWaitingForConfigComplete = true
 		}
-	}
+
+		  
+		  // BLE Characteristics discovered, issue wantConfig
+		  var toRadio: ToRadio = ToRadio()
+		  configNonce += 1
+		  toRadio.wantConfigID = configNonce
+		  
+		  guard let binaryData: Data = try? toRadio.serializedData() else {
+			  Logger.services.error("🚫 [BLE] Failed to serialize WantConfig data")
+			  stopConnectionTimeout()
+			  isWaitingForConfigComplete = false
+			  return
+		  }
+		if isRetry {
+			connectedPeripheral!.peripheral.writeValue(binaryData, for: TORADIO_characteristic, type: .withResponse)
+		}
+		  
+		  // Either Read the config complete value or from num notify value
+		  guard connectedPeripheral != nil else {
+			  stopConnectionTimeout()
+			  isWaitingForConfigComplete = false
+			  return
+		  }
+		  connectedPeripheral!.peripheral.readValue(for: FROMRADIO_characteristic)
+	  }
 
 	func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
 		if let error {
@@ -583,6 +661,7 @@ class BLEManager: NSObject, CBPeripheralDelegate, MqttClientProxyManagerDelegate
 
 		if let error {
 			Logger.services.error("🚫 [BLE] didUpdateValueFor Characteristic error \(error.localizedDescription, privacy: .public)")
+			stopConnectionTimeout()
 			let errorCode = (error as NSError).code
 			if errorCode == 5 || errorCode == 15 {
 				// BLE PIN connection errors
@@ -772,6 +851,7 @@ class BLEManager: NSObject, CBPeripheralDelegate, MqttClientProxyManagerDelegate
 			case .waypointApp:
 				waypointPacket(packet: decodedInfo.packet, context: context)
 			case .nodeinfoApp:
+				stopConnectionTimeout()
 				if !invalidVersion { upsertNodeInfoPacket(packet: decodedInfo.packet, context: context) }
 			case .routingApp:
 				if !invalidVersion { routingPacket(packet: decodedInfo.packet, connectedNodeNum: self.connectedPeripheral.num, context: context) }
@@ -1763,7 +1843,7 @@ class BLEManager: NSObject, CBPeripheralDelegate, MqttClientProxyManagerDelegate
 					}
 
 					if self.connectedPeripheral != nil {
-						self.sendWantConfig()
+						self.sendWantConfig(isRetry: false)
 						return true
 					}
 
@@ -1826,7 +1906,7 @@ class BLEManager: NSObject, CBPeripheralDelegate, MqttClientProxyManagerDelegate
 					}
 
 					if self.connectedPeripheral != nil {
-						self.sendWantConfig()
+						self.sendWantConfig(isRetry: false)
 						return true
 					}
 

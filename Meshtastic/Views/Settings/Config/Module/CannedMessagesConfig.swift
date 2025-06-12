@@ -217,7 +217,7 @@ struct CannedMessagesConfig: View {
 						// for now just disable the button after a successful save
 						hasMessagesChanges = false
 						if !hasChanges {
-							bleManager.sendWantConfig()
+							bleManager.sendWantConfig(isRetry: false)
 							goBack()
 						}
 					}
