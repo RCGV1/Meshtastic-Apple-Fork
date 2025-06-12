@@ -527,9 +527,8 @@ class BLEManager: NSObject, CBPeripheralDelegate, MqttClientProxyManagerDelegate
 	   }
 	   
 	   private func handleConnectionTimeout() {
-		   Logger.services.warning("⏰ [BLE] Connection timeout occurred after \(self.connectionTimeoutInterval) seconds")
-		   
 		   if isWaitingForConfigComplete {
+		   Logger.services.warning("⏰ [BLE] Connection timeout occurred after \(self.connectionTimeoutInterval) seconds")
 			   Logger.services.warning("🔄 [BLE] No config complete response, attempting retry")
 			   retryWantConfig()
 		   }
