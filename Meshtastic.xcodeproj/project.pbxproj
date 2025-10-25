@@ -96,6 +96,10 @@
 		B399E8A42B6F486400E4488E /* RetryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B399E8A32B6F486400E4488E /* RetryButton.swift */; };
 		B3E905B12B71F7F300654D07 /* TextMessageField.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3E905B02B71F7F300654D07 /* TextMessageField.swift */; };
 		BC10380F2DD4334400B00BFA /* AddContactIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC10380E2DD4333C00B00BFA /* AddContactIntent.swift */; };
+		BC22D9DE2EA87FFF00C17D73 /* GeoTIFFParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC22D9DD2EA87FED00C17D73 /* GeoTIFFParser.swift */; };
+		BC22D9E12EA8823D00C17D73 /* TIFF in Frameworks */ = {isa = PBXBuildFile; productRef = BC22D9E02EA8823D00C17D73 /* TIFF */; };
+		BC22D9E52EA9872000C17D73 /* GeoImageOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC22D9E42EA9872000C17D73 /* GeoImageOverlay.swift */; };
+		BC22D9E72EA9872600C17D73 /* MeshMapGeoTIFFLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC22D9E62EA9872600C17D73 /* MeshMapGeoTIFFLayer.swift */; };
 		BC6B45FF2CB2F98900723CEB /* SaveChannelSettingsIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC6B45FE2CB2F98900723CEB /* SaveChannelSettingsIntent.swift */; };
 		BCB35B4F2E5FC42500B04F60 /* MessageNodeIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCB35B4E2E5FC41E00B04F60 /* MessageNodeIntent.swift */; };
 		BCB613812C67290800485544 /* SendWaypointIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCB613802C67290800485544 /* SendWaypointIntent.swift */; };
@@ -406,6 +410,9 @@
 		B399E8A32B6F486400E4488E /* RetryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetryButton.swift; sourceTree = "<group>"; };
 		B3E905B02B71F7F300654D07 /* TextMessageField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextMessageField.swift; sourceTree = "<group>"; };
 		BC10380E2DD4333C00B00BFA /* AddContactIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddContactIntent.swift; sourceTree = "<group>"; };
+		BC22D9DD2EA87FED00C17D73 /* GeoTIFFParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoTIFFParser.swift; sourceTree = "<group>"; };
+		BC22D9E42EA9872000C17D73 /* GeoImageOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoImageOverlay.swift; sourceTree = "<group>"; };
+		BC22D9E62EA9872600C17D73 /* MeshMapGeoTIFFLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshMapGeoTIFFLayer.swift; sourceTree = "<group>"; };
 		BC6B45FE2CB2F98900723CEB /* SaveChannelSettingsIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveChannelSettingsIntent.swift; sourceTree = "<group>"; };
 		BCB35B4E2E5FC41E00B04F60 /* MessageNodeIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageNodeIntent.swift; sourceTree = "<group>"; };
 		BCB613802C67290800485544 /* SendWaypointIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SendWaypointIntent.swift; sourceTree = "<group>"; };
@@ -689,6 +696,7 @@
 				102B5EB12E172F41003D191E /* DatadogRUM in Frameworks */,
 				DD0D3D222A55CEB10066DB71 /* CocoaMQTT in Frameworks */,
 				10D109F42E2047D600536CE6 /* DatadogTrace in Frameworks */,
+				BC22D9E12EA8823D00C17D73 /* TIFF in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -937,6 +945,8 @@
 				DD15E4F42B8BFC8E00654F61 /* PaxCounterLog.swift */,
 				DDE5B4032B2279A700FCDD05 /* TraceRouteLog.swift */,
 				8D3F8A402D44C2A6009EAAA4 /* PowerMetricsLog.swift */,
+				BC22D9E42EA9872000C17D73 /* GeoImageOverlay.swift */,
+				BC22D9E62EA9872600C17D73 /* MeshMapGeoTIFFLayer.swift */,
 			);
 			path = Nodes;
 			sourceTree = "<group>";
@@ -1278,6 +1288,7 @@
 		DDC2E1A526CEB32B0042C5E4 /* Helpers */ = {
 			isa = PBXGroup;
 			children = (
+				BC22D9DD2EA87FED00C17D73 /* GeoTIFFParser.swift */,
 				3D3417D12E2DC260006A988B /* MapDataManager.swift */,
 				3D3417C72E29D38A006A988B /* GeoJSONOverlayConfig.swift */,
 				BCD7448C2E0F2FA300F265A2 /* ContactURLHandler.swift */,
@@ -1451,6 +1462,7 @@
 				102B5EB02E172F41003D191E /* DatadogRUM */,
 				10D109F12E2047D600536CE6 /* DatadogSessionReplay */,
 				10D109F32E2047D600536CE6 /* DatadogTrace */,
+				BC22D9E02EA8823D00C17D73 /* TIFF */,
 			);
 			productName = MeshtasticClient;
 			productReference = DDC2E15426CE248E0042C5E4 /* Meshtastic.app */;
@@ -1522,6 +1534,7 @@
 				25A978B82C13F8ED0003AAE7 /* XCLocalSwiftPackageReference "MeshtasticProtobufs" */,
 				259792242C2F10B600AD1659 /* XCRemoteSwiftPackageReference "swift-protobuf" */,
 				102B5EA92E172F41003D191E /* XCRemoteSwiftPackageReference "dd-sdk-ios" */,
+				BC22D9DF2EA880C700C17D73 /* XCRemoteSwiftPackageReference "tiff-ios" */,
 			);
 			productRefGroup = DDC2E15526CE248E0042C5E4 /* Products */;
 			projectDirPath = "";
@@ -1700,6 +1713,7 @@
 				DD9C700D2E8D5A9500106227 /* ChannelMessageRow.swift in Sources */,
 				DDDB444229F8A88700EE2349 /* Double.swift in Sources */,
 				DDF45C342BC1A48E005ED5F2 /* MQTTIcon.swift in Sources */,
+				BC22D9E52EA9872000C17D73 /* GeoImageOverlay.swift in Sources */,
 				DDA9515A2BC6624100CEA535 /* TelemetryWeather.swift in Sources */,
 				DD1BD0EB2C601795008C0C70 /* CLLocation.swift in Sources */,
 				231251382E3BC96400E6ED07 /* BLEAuthorizationHelper.swift in Sources */,
@@ -1789,6 +1803,7 @@
 				DD86D4112881D16900BAEB7A /* WriteCsvFile.swift in Sources */,
 				DD6F65762C6EA5490053C113 /* AckErrors.swift in Sources */,
 				DDDB445029F8AC9C00EE2349 /* UIImage.swift in Sources */,
+				BC22D9E72EA9872600C17D73 /* MeshMapGeoTIFFLayer.swift in Sources */,
 				DD86D40F2881BE4C00BAEB7A /* CsvDocument.swift in Sources */,
 				23A1AFB72E42BD2500E46C96 /* RXTXIndicatorView.swift in Sources */,
 				DDB75A1E2A0B0CD0006ED576 /* LoRaSignalStrengthIndicator.swift in Sources */,
@@ -1825,6 +1840,7 @@
 				DD15E4F52B8BFC8E00654F61 /* PaxCounterLog.swift in Sources */,
 				BCE2D3C32C7ADF42008E6199 /* ShutDownNodeIntent.swift in Sources */,
 				23E23F922E392C2B00919073 /* LogRecord+StringRepresentation.swift in Sources */,
+				BC22D9DE2EA87FFF00C17D73 /* GeoTIFFParser.swift in Sources */,
 				25F5D5C22C3F6E4B008036E3 /* AppState.swift in Sources */,
 				DD3CC6C028E7A60700FA9159 /* MessagingEnums.swift in Sources */,
 				DD6F657B2C6EC2900053C113 /* LockLegend.swift in Sources */,
@@ -2272,6 +2288,14 @@
 				minimumVersion = 1.26.0;
 			};
 		};
+		BC22D9DF2EA880C700C17D73 /* XCRemoteSwiftPackageReference "tiff-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ngageoint/tiff-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
 		DD0D3D202A55CEB10066DB71 /* XCRemoteSwiftPackageReference "CocoaMQTT" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/emqx/CocoaMQTT";
@@ -2320,6 +2344,11 @@
 		25A978BB2C13F90D0003AAE7 /* MeshtasticProtobufs */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = MeshtasticProtobufs;
+		};
+		BC22D9E02EA8823D00C17D73 /* TIFF */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BC22D9DF2EA880C700C17D73 /* XCRemoteSwiftPackageReference "tiff-ios" */;
+			productName = TIFF;
 		};
 		DD0D3D212A55CEB10066DB71 /* CocoaMQTT */ = {
 			isa = XCSwiftPackageProductDependency;

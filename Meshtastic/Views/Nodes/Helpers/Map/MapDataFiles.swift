@@ -18,7 +18,7 @@ struct MapDataFiles: View {
 	var body: some View {
 		Form {
 			Section(header: Text("Upload Map Overlays")) {
-				Text("Upload GeoJSON files to display custom map overlays. Files are stored locally and can be up to 10MB.")
+				Text("Upload GeoJSON or GeoTIFF files to display custom map overlays. Files are stored locally and can be up to 10MB.")
 					.font(.callout)
 					.foregroundColor(.secondary)
 				// Upload Button
@@ -77,7 +77,9 @@ struct MapDataFiles: View {
 			isPresented: $isShowingFilePicker,
 			allowedContentTypes: [
 				UTType.json,
-				UTType(filenameExtension: "geojson") ?? UTType.json
+				UTType(filenameExtension: "geojson") ?? UTType.json,
+				UTType(filenameExtension: "tiff") ?? UTType.data,
+				UTType(filenameExtension: "tif") ?? UTType.data
 			],
 			allowsMultipleSelection: false
 		) { result in
@@ -115,7 +117,15 @@ struct MapDataFiles: View {
 					// Simulate progress
 					await simulateProgress()
 
-					let metadata = try await mapDataManager.processUploadedFile(from: selectedFile)
+					let metadata: MapDataMetadata
+					let fileExtension = selectedFile.pathExtension.lowercased()
+					if fileExtension == "json" || fileExtension == "geojson" {
+						metadata = try await mapDataManager.processUploadedFile(from: selectedFile)
+					} else if fileExtension == "tiff" || fileExtension == "tif" {
+						metadata = try await mapDataManager.processGeoTIFFFile(from: selectedFile)
+					} else {
+						throw NSError(domain: "UnsupportedFormat", code: 0, userInfo: [NSLocalizedDescriptionKey: "Unsupported file format."])
+					}
 
 					await MainActor.run {
 						isProcessing = false

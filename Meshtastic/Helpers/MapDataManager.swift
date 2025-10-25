@@ -17,6 +17,7 @@ class MapDataManager: ObservableObject {
 	// MARK: - Properties
 	@Published private var uploadedFiles: [MapDataMetadata] = []
 	private var activeFeatureCollection: GeoJSONFeatureCollection?
+	private var activeGeoTIFFs: [ParsedGeoTIFF] = []
 
 	// MARK: - File Management
 
@@ -55,6 +56,69 @@ class MapDataManager: ObservableObject {
 	}
 
 	// MARK: - File Upload & Processing
+
+	/// Process and store an uploaded GeoTIFF file
+	func processGeoTIFFFile(from sourceURL: URL) async throws -> MapDataMetadata {
+		// 1. Start accessing security-scoped resource
+		let isAccessing = sourceURL.startAccessingSecurityScopedResource()
+		defer {
+			if isAccessing {
+				sourceURL.stopAccessingSecurityScopedResource()
+			}
+		}
+
+		// 2. Validate file
+		try validateGeoTIFFFile(at: sourceURL)
+
+		// 3. Create directories if needed
+		guard createDirectoriesIfNeeded() else {
+			throw MapDataError.directoryCreationFailed
+		}
+
+		// 4. Generate destination filename
+		let timestamp = Date().timeIntervalSince1970
+		let originalName = sourceURL.deletingPathExtension().lastPathComponent
+		let fileExtension = sourceURL.pathExtension
+		let newFilename = "\(originalName)_\(Int(timestamp)).\(fileExtension)"
+
+		guard let destURL = getUserUploadedDirectory()?.appendingPathComponent(newFilename) else {
+			throw MapDataError.invalidDestination
+		}
+
+		// 5. Copy file to app storage
+		try FileManager.default.copyItem(at: sourceURL, to: destURL)
+
+		// 6. Parse GeoTIFF and extract metadata
+		let parsedGeoTIFF = try GeoTIFFParser.parse(from: destURL)
+
+		// 7. Create metadata
+		let fileAttributes = try destURL.resourceValues(forKeys: [.fileSizeKey, .creationDateKey])
+		let fileSize = fileAttributes.fileSize ?? 0
+		let uploadDate = fileAttributes.creationDate ?? Date()
+		let isFirstFile = uploadedFiles.isEmpty
+
+		let metadata = MapDataMetadata(
+			filename: destURL.lastPathComponent,
+			originalName: originalName,
+			uploadDate: uploadDate,
+			fileSize: Int64(fileSize),
+			format: fileExtension.lowercased(),
+			license: nil,
+			attribution: nil,
+			overlayCount: parsedGeoTIFF.overlayCount,
+			isActive: isFirstFile
+		)
+
+		// 8. Save metadata and update UI on main thread
+		await MainActor.run {
+			uploadedFiles.append(metadata)
+			activeFeatureCollection = nil
+			activeGeoTIFFs = []
+		}
+		try saveMetadata()
+
+		return metadata
+	}
 
 	/// Process and store an uploaded file
 	func processUploadedFile(from sourceURL: URL) async throws -> MapDataMetadata {
@@ -96,10 +160,33 @@ class MapDataManager: ObservableObject {
 			uploadedFiles.append(metadata)
 			// Clear cached configuration to force reload
 			activeFeatureCollection = nil
+			activeGeoTIFFs = []
 		}
 		try saveMetadata()
 
 		return metadata
+	}
+
+	/// Validate uploaded GeoTIFF file
+	private func validateGeoTIFFFile(at url: URL) throws {
+		let fileAttributes = try url.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey])
+
+		// Check file size (GeoTIFFs can be larger, but still limit)
+		guard let fileSize = fileAttributes.fileSize, fileSize <= maxFileSize else {
+			throw MapDataError.fileTooLarge
+		}
+
+		// Check if it's a regular file
+		guard fileAttributes.isRegularFile == true else {
+			throw MapDataError.invalidFileType
+		}
+
+		// Check file extension
+		let allowedExtensions = ["tif", "tiff", "gtif", "geotiff"]
+		let fileExtension = url.pathExtension.lowercased()
+		guard allowedExtensions.contains(fileExtension) else {
+			throw MapDataError.unsupportedFormat
+		}
 	}
 
 	/// Validate uploaded file
@@ -190,6 +277,21 @@ class MapDataManager: ObservableObject {
 		throw MapDataError.invalidContent
 	}
 
+	/// Check if a file is a GeoTIFF based on extension
+	private func isGeoTIFF(_ filename: String) -> Bool {
+		let ext = (filename as NSString).pathExtension.lowercased()
+		return ["tif", "tiff", "gtif", "geotiff"].contains(ext)
+	}
+
+	/// Load GeoTIFF from a single file
+	private func loadGeoTIFFFromFile(_ file: MapDataMetadata) throws -> ParsedGeoTIFF? {
+		guard let fileURL = getUserUploadedDirectory()?.appendingPathComponent(file.filename) else {
+			throw MapDataError.fileNotFound
+		}
+
+		return try GeoTIFFParser.parse(from: fileURL)
+	}
+
 	/// Load feature collection from a single file
 	private func loadFeatureCollectionFromFile(_ file: MapDataMetadata) throws -> GeoJSONFeatureCollection? {
 		guard let fileURL = getUserUploadedDirectory()?.appendingPathComponent(file.filename) else {
@@ -211,12 +313,17 @@ class MapDataManager: ObservableObject {
 		var allFeatures: [GeoJSONFeature] = []
 
 		for file in files {
+			// Skip GeoTIFF files in GeoJSON loading
+			if isGeoTIFF(file.filename) {
+				continue
+			}
+
 			do {
 				if let featureCollection = try loadFeatureCollectionFromFile(file) {
 					allFeatures.append(contentsOf: featureCollection.features)
 				}
 			} catch {
-				Logger.services.error("📁 MapDataManager: Failed to load feature collection from \(file.filename, privacy: .public): \(error.localizedDescription, privacy: .public)")
+				Logger.services.error("📂 MapDataManager: Failed to load feature collection from \(file.filename, privacy: .public): \(error.localizedDescription, privacy: .public)")
 				continue
 			}
 		}
@@ -233,8 +340,8 @@ class MapDataManager: ObservableObject {
 			return cached
 		}
 
-		// Find active user files
-		let activeFiles = uploadedFiles.filter { $0.isActive }
+		// Find active user files (GeoJSON only)
+		let activeFiles = uploadedFiles.filter { $0.isActive && !isGeoTIFF($0.filename) }
 
 		guard !activeFiles.isEmpty else {
 			return nil
@@ -242,17 +349,17 @@ class MapDataManager: ObservableObject {
 
 		var allFeatures: [GeoJSONFeature] = []
 
-		// Load features from all active files
+		// Load features from all active GeoJSON files
 		for activeFile in activeFiles {
 
 			guard let fileURL = getUserUploadedDirectory()?.appendingPathComponent(activeFile.filename) else {
-				Logger.services.error("📁 MapDataManager: Could not construct file URL for: \(activeFile.filename, privacy: .public)")
+				Logger.services.error("📂 MapDataManager: Could not construct file URL for: \(activeFile.filename, privacy: .public)")
 				continue
 			}
 
 			// Check if file exists before trying to load it
 			if !FileManager.default.fileExists(atPath: fileURL.path) {
-				Logger.services.error("📁 MapDataManager: Active file does not exist at path: \(fileURL.path, privacy: .public)")
+				Logger.services.error("📂 MapDataManager: Active file does not exist at path: \(fileURL.path, privacy: .public)")
 
 				// Remove the missing file from our metadata
 				if let index = uploadedFiles.firstIndex(where: { $0.filename == activeFile.filename }) {
@@ -260,7 +367,7 @@ class MapDataManager: ObservableObject {
 					do {
 						try saveMetadata()
 					} catch {
-						Logger.services.error("📁 MapDataManager: Failed to save cleaned metadata: \(error.localizedDescription, privacy: .public)")
+						Logger.services.error("📂 MapDataManager: Failed to save cleaned metadata: \(error.localizedDescription, privacy: .public)")
 					}
 				}
 				continue
@@ -272,8 +379,12 @@ class MapDataManager: ObservableObject {
 
 				allFeatures.append(contentsOf: featureCollection.features)
 			} catch {
-				Logger.services.error("📁 MapDataManager: Failed to load feature collection from \(activeFile.filename, privacy: .public): \(error.localizedDescription, privacy: .public)")
+				Logger.services.error("📂 MapDataManager: Failed to load feature collection from \(activeFile.filename, privacy: .public): \(error.localizedDescription, privacy: .public)")
 			}
+		}
+
+		guard !allFeatures.isEmpty else {
+			return nil
 		}
 
 		// Create combined feature collection
@@ -284,6 +395,46 @@ class MapDataManager: ObservableObject {
 
 		activeFeatureCollection = combinedCollection
 		return combinedCollection
+	}
+
+	/// Load all active GeoTIFF files
+	func loadActiveGeoTIFFs() -> [ParsedGeoTIFF] {
+		if !activeGeoTIFFs.isEmpty {
+			return activeGeoTIFFs
+		}
+
+		// Find active GeoTIFF files
+		let activeFiles = uploadedFiles.filter { $0.isActive && isGeoTIFF($0.filename) }
+
+		guard !activeFiles.isEmpty else {
+			return []
+		}
+
+		var geoTiffs: [ParsedGeoTIFF] = []
+
+		for activeFile in activeFiles {
+			guard let fileURL = getUserUploadedDirectory()?.appendingPathComponent(activeFile.filename) else {
+				Logger.services.error("📂 MapDataManager: Could not construct file URL for: \(activeFile.filename, privacy: .public)")
+				continue
+			}
+
+			// Check if file exists
+			if !FileManager.default.fileExists(atPath: fileURL.path) {
+				Logger.services.error("📂 MapDataManager: Active GeoTIFF file does not exist at path: \(fileURL.path, privacy: .public)")
+				continue
+			}
+
+			do {
+				if let parsedGeoTIFF = try loadGeoTIFFFromFile(activeFile) {
+					geoTiffs.append(parsedGeoTIFF)
+				}
+			} catch {
+				Logger.services.error("📂 MapDataManager: Failed to load GeoTIFF from \(activeFile.filename, privacy: .public): \(error.localizedDescription, privacy: .public)")
+			}
+		}
+
+		activeGeoTIFFs = geoTiffs
+		return geoTiffs
 	}
 
 	// MARK: - File Management
@@ -303,6 +454,7 @@ class MapDataManager: ObservableObject {
 				try saveMetadata()
 				// Clear cached data to force reload
 				activeFeatureCollection = nil
+				activeGeoTIFFs = []
 			} catch {
 				Logger.services.error("🚨 MapDataManager: FAILED to save metadata after toggling file: \(error.localizedDescription)")
 			}
@@ -350,6 +502,7 @@ class MapDataManager: ObservableObject {
 			if activeFeatureCollection != nil {
 				activeFeatureCollection = nil
 			}
+			activeGeoTIFFs = []
 		}
 
 		// Clear GeoJSON overlay manager cache

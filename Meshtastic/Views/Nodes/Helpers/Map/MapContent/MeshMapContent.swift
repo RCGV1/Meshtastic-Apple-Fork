@@ -44,6 +44,9 @@ struct MeshMapContent: MapContent {
 				  predicate: NSPredicate(format: "enabled == true", ""), animation: .none)
 	private var routes: FetchedResults<RouteEntity>
 	
+	@ObservedObject private var mapDataManager = MapDataManager.shared
+
+	
 	@MapContentBuilder
 	var positionAnnotations: some MapContent {
 		ForEach(positions, id: \.id) { position in
@@ -141,7 +144,7 @@ struct MeshMapContent: MapContent {
 			}
 		}
 		
-		/// GeoJSON Overlays with embedded styling
+		/// GeoJSON/GeoTIFF Overlays with embedded styling
 		if showMapOverlays {
 			overlayContent
 		}
@@ -150,10 +153,10 @@ struct MeshMapContent: MapContent {
 		routeAnnotations
 		waypointAnnotations
 	}
-	
 	var overlayContent: some MapContent {
 		// Get all features but filter by enabled configs
 		let allStyledFeatures = GeoJSONOverlayManager.shared.loadStyledFeaturesForConfigs(enabledOverlayConfigs)
+		let allGeoTiffs = mapDataManager.loadActiveGeoTIFFs()
 		
 		return Group {
 			ForEach(0..<allStyledFeatures.count, id: \.self) { index in
@@ -185,11 +188,14 @@ struct MeshMapContent: MapContent {
 					}
 				}
 			}
+			
 		}
 	}
+	
 	
 	@MapContentBuilder
 	var body: some MapContent {
 		meshMap
+		
 	}
 }

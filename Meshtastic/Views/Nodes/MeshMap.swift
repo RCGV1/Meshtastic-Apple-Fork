@@ -43,6 +43,9 @@ struct MeshMap: View {
 	@State var isMeshMap = true
 	/// Filter
 	@StateObject var filters = NodeFilterParameters()
+	
+	@ObservedObject private var mapDataManager = MapDataManager.shared
+
 
 	var body: some View {
 		NavigationStack {
@@ -62,6 +65,11 @@ struct MeshMap: View {
 							selectedWaypoint: $selectedWaypoint,
 							enabledOverlayConfigs: $enabledOverlayConfigs
 						)
+					}
+					.overlay {
+						let allGeoTiffs = mapDataManager.loadActiveGeoTIFFs()
+
+						GeoTIFFMapView(geoTiffs: allGeoTiffs, opacity: 0.5)
 					}
 					.mapScope(mapScope)
 					.mapStyle(mapStyle)
