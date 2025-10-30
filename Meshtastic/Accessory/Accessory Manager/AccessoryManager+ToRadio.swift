@@ -129,7 +129,8 @@ extension AccessoryManager {
 		let decodedString = base64UrlString.base64urlToBase64()
 		if let decodedData = Data(base64Encoded: decodedString) {
 			do {
-				let contact: SharedContact = try SharedContact(serializedBytes: decodedData)
+				var contact: SharedContact = try SharedContact(serializedBytes: decodedData)
+				contact.manuallyVerified = true
 				var adminPacket = AdminMessage()
 				adminPacket.addContact = contact
 				var meshPacket: MeshPacket = MeshPacket()
@@ -152,10 +153,10 @@ extension AccessoryManager {
 
 				let logString = String.localizedStringWithFormat("Added contact %@ to device".localized, contact.user.longName)
 				try await send(toRadio, debugDescription: logString)
-
 				// Create a NodeInfo (User) packet for the newly added contact
 				var dataNodeMessage = DataMessage()
 				if let nodeInfoData = try? contact.user.serializedData() {
+					
 					dataNodeMessage.payload = nodeInfoData
 					dataNodeMessage.portnum = PortNum.nodeinfoApp
 					var nodeMeshPacket = MeshPacket()

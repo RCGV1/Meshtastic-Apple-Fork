@@ -228,6 +228,10 @@ func upsertNodeInfoPacket (packet: MeshPacket, favorite: Bool = false, context: 
 					newUser.role = Int32(newUserMessage.role.rawValue)
 					newUser.hwModel = String(describing: newUserMessage.hwModel).uppercased()
 					newUser.hwModelId = Int32(newUserMessage.hwModel.rawValue)
+					
+					if let nodeInfoMessage = try? NodeInfo(serializedBytes: packet.decoded.payload) {
+						newUser.isLicensed = nodeInfoMessage.isKeyManuallyVerified
+					}
 					/// For nodes that have the optional isUnmessagable boolean use that, otherwise excluded roles that are unmessagable by default
 					if newUserMessage.hasIsUnmessagable {
 						newUser.unmessagable = newUserMessage.isUnmessagable
@@ -352,6 +356,7 @@ func upsertNodeInfoPacket (packet: MeshPacket, favorite: Bool = false, context: 
 					fetchedNode[0].user?.role = Int32(nodeInfoMessage.user.role.rawValue)
 					fetchedNode[0].user?.hwModel = String(describing: nodeInfoMessage.user.hwModel).uppercased()
 					fetchedNode[0].user?.hwModelId = Int32(nodeInfoMessage.user.hwModel.rawValue)
+					fetchedNode[0].user?.isKeyManuallyVerified = nodeInfoMessage.isKeyManuallyVerified
 					/// For nodes that have the optional isUnmessagable boolean use that, otherwise excluded roles that are unmessagable by default
 					if nodeInfoMessage.user.hasIsUnmessagable {
 						fetchedNode[0].user?.unmessagable = nodeInfoMessage.user.isUnmessagable

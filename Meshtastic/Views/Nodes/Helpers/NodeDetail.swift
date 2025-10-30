@@ -28,54 +28,179 @@ struct NodeDetail: View {
 	@ObservedObject	var node: NodeInfoEntity
 	@State private var environmentSectionHeight: CGFloat = 0
 	
+	
+	
+	private var shouldShowSignalBatteryRow: Bool {
+		signalBatteryItems.count > 0
+	}
+
+	private var signalBatteryItems: [AnyView] {
+		var views: [AnyView] = []
+		
+		// 1. Signal Strength (only if direct, SNR valid, not via MQTT)
+		if node.snr != 0 && !node.viaMqtt && node.hopsAway == 0 {
+			let signalStrength = getLoRaSignalStrength(snr: node.snr, rssi: node.rssi, preset: modemPreset)
+			views.append(AnyView(
+				VStack {
+					LoRaSignalStrengthIndicator(signalStrength: signalStrength)
+					Text("Signal \(signalStrength.description)").font(.footnote)
+					Text("SNR \(String(format: "%.2f", node.snr))dB")
+						.foregroundColor(getSnrColor(snr: node.snr, preset: modemPreset))
+						.font(.caption)
+					Text("RSSI \(node.rssi)dB")
+						.foregroundColor(getRssiColor(rssi: node.rssi))
+						.font(.caption)
+				}
+				.accessibilityElement(children: .combine)
+			))
+		}
+		
+		// 2. Battery Gauge (only if telemetry exists)
+		if (node.telemetries?.count ?? 0) > 0 {
+			views.append(AnyView(BatteryGauge(node: node)))
+		}
+		
+		return views
+	}
+	
+	
+	
 	var body: some View {
 		NavigationStack {
 			ScrollViewReader { scrollView in
 				Color.clear
 					.frame(height: 0) // Ensure it has no height
 					.id("topOfList")
+
 				List {
 					let connectedNode = getNodeInfo(
 						id: accessoryManager.activeDeviceNum ?? -1,
 						context: context
 					)
-					Section("Hardware") {
-		
-						NodeInfoItem(node: node)
-						//	.id("topOfList")
+//					Section("Hardware") {
+//						
+//						//NodeInfoItem(node: node)
+//						//	.id("topOfList")
+//					}
+//					.accessibilityElement(children: .combine)
+					VStack(alignment: .center) {
+						CircleText(
+							text: node.user?.shortName ?? "?",
+							color: Color(UIColor(hex: UInt32(node.num))),
+							circleSize: 75
+						)
+						Text(node.user?.longName ?? "Unknown Node")
+							.font(Font.largeTitle.bold())
 					}
-					.accessibilityElement(children: .combine)
-					Section("Node") { // Node
-						HStack(alignment: .center) {
-							Spacer()
-							CircleText(
-								text: node.user?.shortName ?? "?",
-								color: Color(UIColor(hex: UInt32(node.num))),
-								circleSize: 75
-							)
-							if node.snr != 0 && !node.viaMqtt && node.hopsAway == 0 {
-								Spacer()
-								VStack {
-									let signalStrength = getLoRaSignalStrength(snr: node.snr, rssi: node.rssi, preset: modemPreset)
-									LoRaSignalStrengthIndicator(signalStrength: signalStrength)
-									Text("Signal \(signalStrength.description)").font(.footnote)
-									Text("SNR \(String(format: "%.2f", node.snr))dB")
-										.foregroundColor(getSnrColor(snr: node.snr, preset: modemPreset))
-										.font(.caption)
-									Text("RSSI \(node.rssi)dB")
-										.foregroundColor(getRssiColor(rssi: node.rssi))
-										.font(.caption)
+					.listRowBackground(Color.clear)   // removes row background
+					.listRowSeparator(.hidden)
+					.frame(maxWidth: .infinity)
+					Section {
+						// Encryption Status Link
+						NavigationLink(destination: EncryptionStatusView(node: node)) {
+							HStack {
+								if let user = node.user {
+									if user.keyMatch {
+										Label {
+											Text("Encryption")
+										} icon: {
+											Image(systemName: "lock.fill")
+												.foregroundColor(.green)
+										}
+										Spacer()
+										Text("Encrypted")
+									} else {
+										Label {
+											Text("Encryption")
+										} icon: {
+											Image(systemName: "key.slash.fill")
+												.foregroundColor(.red)
+										}
+										Spacer()
+										Text("Public Key Mismatch")
+									}
+								} else {
+									Label {
+										Text("Encryption")
+									} icon: {
+										Image(systemName: "lock.open")
+											.foregroundColor(.yellow)
+									}
+									Spacer()
+									Text("Unencrypted")
 								}
-								.accessibilityElement(children: .combine)
 							}
-							if node.telemetries?.count ?? 0 > 0 {
-								Spacer()
-								BatteryGauge(node: node)
-							}
-							Spacer()
+							.accessibilityElement(children: .combine)
 						}
-						.accessibilityElement(children: .combine)
-						.listRowSeparator(.hidden)
+
+						// Direct Message Link
+						if let user = node.user {
+							if user.unmessagable == false {
+								NavigationLink(destination: UserMessageList(user: user)) {
+									HStack {
+										Label {
+											VStack(alignment: .leading, spacing: 2) {
+												Text("Direct Message")
+													.font(.body)
+												if let lastMessage = user.messageList.last {
+													let timestamp = lastMessage.timestamp
+													Text("Last Chat at \(timestamp.formatted(date: .omitted, time: .shortened))")
+														.font(.caption)
+														.foregroundColor(.secondary)
+												} else {
+													Text("Start a chat")
+														.font(.caption)
+														.foregroundColor(.secondary)
+												}
+											}
+										} icon: {
+											Image(systemName: "message.fill")
+												.foregroundColor(.blue)
+										}
+										Spacer()
+									}
+									.accessibilityElement(children: .combine)
+								}
+							}
+						}
+					}
+					Section("Node") { // Node
+						if shouldShowSignalBatteryRow {
+							HStack {
+								Spacer()
+								
+								// Dynamically collect active items
+								let items: [AnyView] = signalBatteryItems
+								
+								if items.count == 1 {
+									// Center single item
+									items[0]
+								} else if items.count == 2 {
+									// Evenly space two items
+									HStack {
+										Spacer()
+										items[0]
+										Spacer()
+										items[1]
+										Spacer()
+									}
+								} else if items.count >= 3 {
+									// Three items: balanced spacing
+									HStack {
+										ForEach(items.indices, id: \.self) { index in
+											items[index]
+											if index < items.count - 1 {
+												Spacer()
+											}
+										}
+									}
+								}
+								
+								Spacer()
+							}
+							.listRowSeparator(.hidden)
+							.accessibilityElement(children: .combine)
+						}
 						if let user = node.user {
 							if !user.keyMatch {
 								Label {
@@ -95,6 +220,47 @@ struct NodeDetail: View {
 								}
 							}
 						}
+						NavigationLink(destination: NodeHardwareView(node: node)) {
+							HStack {
+								if let hwImage = node.user?.hardwareImage,
+								   hwImage != "UNSET",
+								   !hwImage.isEmpty {
+									Image(hwImage)
+										.resizable()
+										.aspectRatio(contentMode: .fit)
+										.frame(width: 36, height: 36)
+										.clipShape(RoundedRectangle(cornerRadius: 6))
+										.overlay(
+											RoundedRectangle(cornerRadius: 6)
+												.stroke(Color(UIColor.separator), lineWidth: 0.5)
+										)
+								} else {
+									Image(systemName: "flipphone")
+										.font(.system(size: 20))
+										.foregroundColor(.secondary)
+										.frame(width: 36, height: 36)
+										.background(Color(UIColor.systemFill))
+										.clipShape(RoundedRectangle(cornerRadius: 6))
+								}
+
+								Text("Hardware")
+									.font(.body)
+
+								Spacer()
+
+								if let user = node.user, user.hwModel != "UNSET" {
+									Text(user.hwDisplayName ?? user.hwModel ?? "Unknown")
+										.font(.subheadline)
+										.foregroundColor(.secondary)
+								} else {
+									Text("Incomplete")
+										.font(.subheadline)
+										.foregroundColor(.secondary)
+								}
+							}
+							.padding(.vertical, 4)
+						}
+						.accessibilityElement(children: .combine)
 						HStack {
 							Label {
 								Text("Node Number")
@@ -119,32 +285,7 @@ struct NodeDetail: View {
 								.textSelection(.enabled)
 						}
 						.accessibilityElement(children: .combine)
-						let connectedNode = getNodeInfo(id: accessoryManager.activeDeviceNum ?? 0, context: context)
-						if let user = node.user, user.keyMatch {
-							let publicKey = node.num == connectedNode?.num
-							? node.securityConfig?.publicKey?.base64EncodedString() ?? ""
-							: user.publicKey?.base64EncodedString() ?? ""
-							HStack {
-								Label {
-									Text("Public Key")
-								} icon: {
-									Image(systemName: "lock.fill")
-										.foregroundColor(.green)
-								}
-								Spacer()
-								Button(action: {
-									context.perform {
-										UIPasteboard.general.string = publicKey
-									}
-								}) {
-									HStack {
-										Image(systemName: "key.horizontal.fill")
-										Text("Copy")
-									}
-								}
-							}
-							.accessibilityElement(children: .combine)
-						}
+	
 						if let metadata = node.metadata {
 							HStack {
 								Label {
@@ -562,7 +703,7 @@ struct NodeDetail: View {
 					scrollView.scrollTo("topOfList", anchor: .top)
 				}
 				.listStyle(.insetGrouped)
-				.navigationTitle(String(node.user?.longName?.addingVariationSelectors ?? "Unknown".localized))
+				.navigationTitle("Contact Info")
 				.navigationBarTitleDisplayMode(.inline)
 			}
 		}
@@ -618,3 +759,4 @@ func abbreviatedCardinalValue(from heading: Double) -> String {
 		return ""
 	}
 }
+

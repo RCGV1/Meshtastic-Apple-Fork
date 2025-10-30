@@ -321,6 +321,7 @@ func nodeInfoPacket (nodeInfo: NodeInfo, channel: UInt32, context: NSManagedObje
 					}
 				}
 				newUser.isLicensed = nodeInfo.user.isLicensed
+				newUser.isKeyManuallyVerified = nodeInfo.isKeyManuallyVerified
 				newUser.role = Int32(nodeInfo.user.role.rawValue)
 				if !nodeInfo.user.publicKey.isEmpty {
 					newUser.pkiEncrypted = true
@@ -415,6 +416,7 @@ func nodeInfoPacket (nodeInfo: NodeInfo, channel: UInt32, context: NSManagedObje
 				fetchedNode[0].user?.role = Int32(nodeInfo.user.role.rawValue)
 				fetchedNode[0].user?.hwModel = String(describing: nodeInfo.user.hwModel).uppercased()
 				fetchedNode[0].user?.hwModelId = Int32(nodeInfo.user.hwModel.rawValue)
+				fetchedNode[0].user?.isKeyManuallyVerified = nodeInfo.isKeyManuallyVerified
 				/// For nodes that have the optional isUnmessagable boolean use that, otherwise excluded roles that are unmessagable by default
 				if nodeInfo.user.hasIsUnmessagable {
 					fetchedNode[0].user?.unmessagable = nodeInfo.user.isUnmessagable
