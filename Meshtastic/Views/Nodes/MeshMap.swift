@@ -26,6 +26,7 @@ struct MeshMap: View {
 	@AppStorage("enableMapTraffic") private var showTraffic: Bool = false
 	@AppStorage("enableMapPointsOfInterest") private var showPointsOfInterest: Bool = false
 	@AppStorage("mapLayer") private var selectedMapLayer: MapLayer = .standard
+    @AppStorage("enableMapCache") private var enableMapCache: Bool = true
 	/// Map overlay configs
 	@State private var enabledOverlayConfigs: Set<UUID> = []
 	// Map Configuration
@@ -126,7 +127,7 @@ struct MeshMap: View {
 						.padding()
 				}
 				.sheet(isPresented: $editingSettings) {
-					MapSettingsForm(traffic: $showTraffic, pointsOfInterest: $showPointsOfInterest, mapLayer: $selectedMapLayer, meshMap: $isMeshMap, enabledOverlayConfigs: $enabledOverlayConfigs)
+                    MapSettingsForm(traffic: $showTraffic, pointsOfInterest: $showPointsOfInterest, mapLayer: $selectedMapLayer, meshMap: $isMeshMap, enabledOverlayConfigs: $enabledOverlayConfigs, enableMapCache: $enableMapCache)
 						.presentationDetents([.large])
 
 				}
@@ -219,3 +220,4 @@ struct MeshMap: View {
 		})
 	}
 }
+

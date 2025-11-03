@@ -1,5 +1,5 @@
 {
-  "originHash" : "fd71b247ba909b0eb360db5530e1068363839c5e169dea6f6a9974b2d98276f4",
+  "originHash" : "ce17025ccb4d16061a3246e899734e8a59fd0bed89d192520a5c897d89491979",
   "pins" : [
     {
       "identity" : "cocoamqtt",
@@ -17,6 +17,15 @@
       "state" : {
         "revision" : "a193cab2786b704ebc98c290a7cc8a3165f636bb",
         "version" : "3.1.0"
+      }
+    },
+    {
+      "identity" : "mapcache",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/merlos/MapCache.git",
+      "state" : {
+        "revision" : "c18c99823de57b6d91c6af248a1e436d380f88cc",
+        "version" : "0.10.0"
       }
     },
     {

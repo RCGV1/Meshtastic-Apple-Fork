@@ -19,12 +19,17 @@ struct MapSettingsForm: View {
 	@AppStorage("enableMapShowFavorites") private var enableMapShowFavorites = false
 	@AppStorage("mapOverlaysEnabled") private var mapOverlaysEnabled = false
 	@ObservedObject private var mapDataManager = MapDataManager.shared
+	@StateObject private var mapCacheManager = MapCacheManager.shared
+	
 	@Binding var traffic: Bool
 	@Binding var pointsOfInterest: Bool
 	@Binding var mapLayer: MapLayer
 	@AppStorage("meshMapDistance") private var meshMapDistance: Double = 800000
 	@Binding var meshMap: Bool
 	@Binding var enabledOverlayConfigs: Set<UUID>
+	@Binding var enableMapCache: Bool
+	
+	@State private var showClearCacheAlert = false
 
 	var body: some View {
 
@@ -121,6 +126,61 @@ struct MapSettingsForm: View {
 					.onTapGesture {
 						self.pointsOfInterest.toggle()
 						UserDefaults.enableMapPointsOfInterest = self.pointsOfInterest
+					}
+				}
+
+				Section(header: Text("Offline Map Cache")) {
+					Toggle(isOn: $enableMapCache) {
+						Label {
+							VStack(alignment: .leading) {
+								Text("Enable Offline Cache")
+								Text("Caches map tiles for offline use")
+									.font(.caption)
+									.foregroundColor(.secondary)
+							}
+						} icon: {
+							Image(systemName: "arrow.down.circle")
+								.symbolRenderingMode(.multicolor)
+						}
+					}
+					.tint(.accentColor)
+					
+					if enableMapCache {
+						HStack {
+							Label("Cache Size", systemImage: "internaldrive")
+							Spacer()
+							if mapCacheManager.isCalculating {
+								ProgressView()
+									.controlSize(.small)
+							} else {
+								Text(ByteCountFormatter.string(fromByteCount: mapCacheManager.cacheSize, countStyle: .file))
+									.foregroundColor(.secondary)
+							}
+							Button(action: {
+								mapCacheManager.calculateCacheSize()
+							}) {
+								Image(systemName: "arrow.clockwise")
+									.font(.caption)
+							}
+							.buttonStyle(.borderless)
+						}
+						
+						Button(role: .destructive, action: {
+							showClearCacheAlert = true
+						}) {
+							Label("Clear Cache", systemImage: "trash")
+								.foregroundColor(.red)
+						}
+						.alert("Clear Map Cache", isPresented: $showClearCacheAlert) {
+							Button("Cancel", role: .cancel) {}
+							Button("Clear", role: .destructive) {
+								mapCacheManager.clearCache {
+									// Cache cleared
+								}
+							}
+						} message: {
+							Text("This will delete all cached map tiles. You'll need to re-download them when browsing the map.")
+						}
 					}
 				}
 
@@ -227,6 +287,10 @@ struct MapSettingsForm: View {
 		.onAppear {
 			// Initialize map data manager
 			mapDataManager.initialize()
+			// Calculate cache size on appear
+			if enableMapCache {
+				mapCacheManager.calculateCacheSize()
+			}
 		}
 
 	}

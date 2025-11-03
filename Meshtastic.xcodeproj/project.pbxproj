@@ -97,6 +97,7 @@
 		B3E905B12B71F7F300654D07 /* TextMessageField.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3E905B02B71F7F300654D07 /* TextMessageField.swift */; };
 		BC10380F2DD4334400B00BFA /* AddContactIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC10380E2DD4333C00B00BFA /* AddContactIntent.swift */; };
 		BC6B45FF2CB2F98900723CEB /* SaveChannelSettingsIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC6B45FE2CB2F98900723CEB /* SaveChannelSettingsIntent.swift */; };
+		BC851D402EB42A51000BEFB4 /* MapCache in Frameworks */ = {isa = PBXBuildFile; productRef = BC851D3F2EB42A51000BEFB4 /* MapCache */; };
 		BCB35B4F2E5FC42500B04F60 /* MessageNodeIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCB35B4E2E5FC41E00B04F60 /* MessageNodeIntent.swift */; };
 		BCB613812C67290800485544 /* SendWaypointIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCB613802C67290800485544 /* SendWaypointIntent.swift */; };
 		BCB613832C672A2600485544 /* MessageChannelIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCB613822C672A2600485544 /* MessageChannelIntent.swift */; };
@@ -684,6 +685,7 @@
 				102B5EAD2E172F41003D191E /* DatadogCrashReporting in Frameworks */,
 				25A978BA2C13F8ED0003AAE7 /* MeshtasticProtobufs in Frameworks */,
 				102B5EAB2E172F41003D191E /* DatadogCore in Frameworks */,
+				BC851D402EB42A51000BEFB4 /* MapCache in Frameworks */,
 				10D109F22E2047D600536CE6 /* DatadogSessionReplay in Frameworks */,
 				102B5EAF2E172F41003D191E /* DatadogLogs in Frameworks */,
 				102B5EB12E172F41003D191E /* DatadogRUM in Frameworks */,
@@ -1451,6 +1453,7 @@
 				102B5EB02E172F41003D191E /* DatadogRUM */,
 				10D109F12E2047D600536CE6 /* DatadogSessionReplay */,
 				10D109F32E2047D600536CE6 /* DatadogTrace */,
+				BC851D3F2EB42A51000BEFB4 /* MapCache */,
 			);
 			productName = MeshtasticClient;
 			productReference = DDC2E15426CE248E0042C5E4 /* Meshtastic.app */;
@@ -1522,6 +1525,7 @@
 				25A978B82C13F8ED0003AAE7 /* XCLocalSwiftPackageReference "MeshtasticProtobufs" */,
 				259792242C2F10B600AD1659 /* XCRemoteSwiftPackageReference "swift-protobuf" */,
 				102B5EA92E172F41003D191E /* XCRemoteSwiftPackageReference "dd-sdk-ios" */,
+				BC851D3C2EB42A00000BEFB4 /* XCRemoteSwiftPackageReference "MapCache" */,
 			);
 			productRefGroup = DDC2E15526CE248E0042C5E4 /* Products */;
 			projectDirPath = "";
@@ -2272,6 +2276,14 @@
 				minimumVersion = 1.26.0;
 			};
 		};
+		BC851D3C2EB42A00000BEFB4 /* XCRemoteSwiftPackageReference "MapCache" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/merlos/MapCache.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.10.0;
+			};
+		};
 		DD0D3D202A55CEB10066DB71 /* XCRemoteSwiftPackageReference "CocoaMQTT" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/emqx/CocoaMQTT";
@@ -2320,6 +2332,11 @@
 		25A978BB2C13F90D0003AAE7 /* MeshtasticProtobufs */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = MeshtasticProtobufs;
+		};
+		BC851D3F2EB42A51000BEFB4 /* MapCache */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BC851D3C2EB42A00000BEFB4 /* XCRemoteSwiftPackageReference "MapCache" */;
+			productName = MapCache;
 		};
 		DD0D3D212A55CEB10066DB71 /* CocoaMQTT */ = {
 			isa = XCSwiftPackageProductDependency;
