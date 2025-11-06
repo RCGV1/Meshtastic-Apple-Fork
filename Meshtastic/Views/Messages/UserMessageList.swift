@@ -24,7 +24,7 @@ struct UserMessageList: View {
 	
 	private var allPrivateMessages: [MessageEntity] {
 		// Cast user.messageList to an array for easier indexing and ForEach.
-		return user.messageList.compactMap { $0 as MessageEntity }
+		return user.messageList(in: context)
 	}
 	
 	func handleInteractionComplete() {

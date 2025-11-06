@@ -11,13 +11,23 @@ import MeshtasticProtobufs
 
 extension UserEntity {
 
-	var messageList: [MessageEntity] {
-		let context = PersistenceController.shared.container.viewContext
+	/// Fetch all non-admin, non-emoji, direct messages related to this user
+	func messageList(in context: NSManagedObjectContext) -> [MessageEntity] {
 		let fetchRequest = MessageEntity.fetchRequest()
-		fetchRequest.sortDescriptors = [NSSortDescriptor(key: "messageTimestamp", ascending: true)]
-		fetchRequest.predicate = NSPredicate(format: "((toUser == %@) OR (fromUser == %@)) AND toUser != nil AND fromUser != nil AND isEmoji == false AND admin = false AND portNum != 10", self, self)
+		fetchRequest.sortDescriptors = [
+			NSSortDescriptor(key: "messageTimestamp", ascending: true)
+		]
+		fetchRequest.predicate = NSPredicate(
+			format: "((toUser == %@) OR (fromUser == %@)) AND toUser != nil AND fromUser != nil AND isEmoji == false AND admin == false AND portNum != 10",
+			self, self
+		)
+		return (try? context.fetch(fetchRequest)) ?? []
+	}
 
-		return (try? context.fetch(fetchRequest)) ?? [MessageEntity]()
+	/// Backward-compatible convenience property
+	/// Uses the shared viewContext if no context is explicitly provided
+	var messageList: [MessageEntity] {
+		messageList(in: PersistenceController.shared.container.viewContext)
 	}
 
 	var sensorMessageList: [MessageEntity] {
