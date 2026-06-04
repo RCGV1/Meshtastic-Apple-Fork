@@ -171,7 +171,6 @@ struct MapSettingsForm: View {
 
 						Button {
 							enableOfflineMaps = true
-							mapLayer = .offline
 							Task {
 								await tileManager.downloadTiles(
 									in: visibleRegion,

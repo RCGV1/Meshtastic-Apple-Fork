@@ -9,6 +9,11 @@ import CoreLocation
 import MapKit
 import SwiftUI
 
+enum OfflineMapAnnotationStyle {
+	case mesh
+	case node
+}
+
 struct OfflineMapView: UIViewRepresentable {
 	let positions: [PositionEntity]
 	let waypoints: [WaypointEntity]
@@ -22,6 +27,7 @@ struct OfflineMapView: UIViewRepresentable {
 	let showPointsOfInterest: Bool
 	let tileServer: MapTileServer
 	let mapTilesAboveLabels: Bool
+	let annotationStyle: OfflineMapAnnotationStyle
 	@Binding var visibleRegion: MKCoordinateRegion?
 	@Binding var selectedPosition: PositionEntity?
 	@Binding var selectedWaypoint: WaypointEntity?
@@ -257,56 +263,164 @@ struct OfflineMapView: UIViewRepresentable {
 		}
 
 		private func positionAnnotationView(for position: PositionEntity, in mapView: MKMapView) -> MKAnnotationView {
-			let view = mapView.dequeueReusableAnnotationView(withIdentifier: "offline-position") as? MKMarkerAnnotationView
-				?? MKMarkerAnnotationView(annotation: position, reuseIdentifier: "offline-position")
-			let nodeColor = UIColor(hex: UInt32(position.nodePosition?.num ?? 0))
-
+			let view = mapView.dequeueReusableAnnotationView(withIdentifier: "offline-position") as? SwiftUIMapAnnotationView
+				?? SwiftUIMapAnnotationView(annotation: position, reuseIdentifier: "offline-position")
 			view.annotation = position
 			view.canShowCallout = true
-			view.markerTintColor = position.latest ? nodeColor : nodeColor.lighter()
 			view.displayPriority = position.latest ? .required : .defaultHigh
-			view.titleVisibility = position.latest ? .visible : .adaptive
-			view.subtitleVisibility = .adaptive
-			view.glyphImage = glyphImage(for: position)
 			view.rightCalloutAccessoryView = UIButton(type: .detailDisclosure)
+			view.setContent(
+				OfflinePositionAnnotation(position: position, style: parent.annotationStyle),
+				size: position.latest ? CGSize(width: 64, height: 64) : CGSize(width: 18, height: 18)
+			)
 			return view
 		}
 
 		private func waypointAnnotationView(for waypoint: WaypointEntity, in mapView: MKMapView) -> MKAnnotationView {
-			let view = mapView.dequeueReusableAnnotationView(withIdentifier: "offline-waypoint") as? MKMarkerAnnotationView
-				?? MKMarkerAnnotationView(annotation: waypoint, reuseIdentifier: "offline-waypoint")
+			let view = mapView.dequeueReusableAnnotationView(withIdentifier: "offline-waypoint") as? SwiftUIMapAnnotationView
+				?? SwiftUIMapAnnotationView(annotation: waypoint, reuseIdentifier: "offline-waypoint")
 			view.annotation = waypoint
 			view.canShowCallout = true
-			view.markerTintColor = UIColor.systemOrange
 			view.displayPriority = .required
-			view.titleVisibility = .adaptive
-			view.glyphText = String(UnicodeScalar(Int(waypoint.icon)) ?? "📍")
 			view.rightCalloutAccessoryView = UIButton(type: .detailDisclosure)
+			view.setContent(OfflineWaypointAnnotation(waypoint: waypoint), size: CGSize(width: 44, height: 44))
 			return view
 		}
+	}
+}
 
-		private func glyphImage(for position: PositionEntity) -> UIImage? {
-			guard let metadata = position.nodePosition?.metadata else {
-				return UIImage(systemName: "flipphone")
+private final class SwiftUIMapAnnotationView: MKAnnotationView {
+	private var hostingController: UIHostingController<AnyView>?
+
+	func setContent<Content: View>(_ content: Content, size: CGSize) {
+		bounds = CGRect(origin: .zero, size: size)
+		backgroundColor = .clear
+
+		let rootView = AnyView(content.frame(width: size.width, height: size.height))
+		if let hostingController {
+			hostingController.rootView = rootView
+			hostingController.view.frame = bounds
+		} else {
+			let hostingController = UIHostingController(rootView: rootView)
+			hostingController.view.backgroundColor = .clear
+			hostingController.view.isUserInteractionEnabled = false
+			hostingController.view.frame = bounds
+			addSubview(hostingController.view)
+			self.hostingController = hostingController
+		}
+	}
+}
+
+private struct OfflinePositionAnnotation: View {
+	let position: PositionEntity
+	let style: OfflineMapAnnotationStyle
+	@State private var scale: CGFloat = 0.5
+
+	var body: some View {
+		if position.latest {
+			switch style {
+			case .mesh:
+				meshLatestAnnotation
+			case .node:
+				nodeLatestAnnotation
 			}
+		} else {
+			historyAnnotation
+		}
+	}
 
-			if PositionFlags(rawValue: Int(metadata.positionFlags)).contains(.Heading) {
-				return UIImage(systemName: "location.north.fill")
+	private var meshLatestAnnotation: some View {
+		ZStack {
+			if position.nodePosition?.isOnline ?? false {
+				Circle()
+					.fill(Color(nodeColor.lighter()).opacity(0.4).shadow(.drop(color: Color(nodeColor).isLight() ? .black : .white, radius: 5)))
+					.foregroundStyle(Color(nodeColor.lighter()).opacity(0.3))
+					.scaleEffect(scale)
+					.animation(Animation.easeInOut(duration: 0.6).repeatForever(), value: scale)
+					.onAppear {
+						scale = 1
+					}
+					.frame(width: 60, height: 60)
 			}
-
-			switch DeviceRoles(rawValue: Int(metadata.role)) {
-			case .router, .routerClient:
-				return UIImage(systemName: "wifi.router.fill")
-			case .repeater:
-				return UIImage(systemName: "repeat")
-			case .tracker:
-				return UIImage(systemName: "location.viewfinder")
-			case .sensor:
-				return UIImage(systemName: "sensor")
-			default:
-				return UIImage(systemName: "flipphone")
+			if position.nodePosition?.hasDetectionSensorMetrics ?? false {
+				Image(systemName: "sensor.fill")
+					.symbolRenderingMode(.palette)
+					.symbolEffect(.variableColor)
+					.padding()
+					.foregroundStyle(.white)
+					.background(Color(nodeColor))
+					.clipShape(Circle())
+			} else {
+				CircleText(text: position.nodePosition?.user?.shortName ?? "?", color: Color(nodeColor), circleSize: 40)
 			}
 		}
+	}
+
+	private var nodeLatestAnnotation: some View {
+		ZStack {
+			Circle()
+				.fill(Color(nodeColor.lighter()).opacity(0.4).shadow(.drop(color: Color(nodeColor).isLight() ? .black : .white, radius: 5)))
+				.foregroundStyle(Color(nodeColor.lighter()).opacity(0.3))
+				.frame(width: 50, height: 50)
+			Image(systemName: nodeSymbolName)
+				.symbolEffect(.pulse.byLayer)
+				.padding(5)
+				.foregroundStyle(Color(nodeColor).isLight() ? .black : .white)
+				.background(Color(nodeColor.darker()))
+				.clipShape(Circle())
+				.rotationEffect(headingDegrees)
+		}
+	}
+
+	private var historyAnnotation: some View {
+		Group {
+			if positionFlags.contains(.Heading) {
+				Image(systemName: "location.north.circle")
+					.resizable()
+					.scaledToFit()
+					.foregroundStyle(Color(nodeColor).isLight() ? .black : .white)
+					.background(Color(nodeColor))
+					.clipShape(Circle())
+					.rotationEffect(headingDegrees)
+					.frame(width: 16, height: 16)
+			} else {
+				Circle()
+					.fill(Color(nodeColor))
+					.strokeBorder(Color(nodeColor).isLight() ? .black : .white, lineWidth: 2)
+					.frame(width: 12, height: 12)
+			}
+		}
+	}
+
+	private var nodeColor: UIColor {
+		UIColor(hex: UInt32(position.nodePosition?.num ?? 0))
+	}
+
+	private var positionFlags: PositionFlags {
+		PositionFlags(rawValue: Int(position.nodePosition?.metadata?.positionFlags ?? 771))
+	}
+
+	private var headingDegrees: Angle {
+		Angle.degrees(Double(position.heading))
+	}
+
+	private var nodeSymbolName: String {
+		if positionFlags.contains(.Heading) {
+			return positionFlags.contains(.Speed) && position.speed > 1 ? "location.north" : "octagon"
+		}
+		return "flipphone"
+	}
+}
+
+private struct OfflineWaypointAnnotation: View {
+	let waypoint: WaypointEntity
+
+	var body: some View {
+		CircleText(
+			text: String(UnicodeScalar(Int(waypoint.icon)) ?? "📍"),
+			color: Color.orange,
+			circleSize: 40
+		)
 	}
 }
 
@@ -353,6 +467,7 @@ struct OfflineMeshMapView: View {
 			showPointsOfInterest: showPointsOfInterest,
 			tileServer: tileServer,
 			mapTilesAboveLabels: mapTilesAboveLabels,
+			annotationStyle: .mesh,
 			visibleRegion: $visibleRegion,
 			selectedPosition: $selectedPosition,
 			selectedWaypoint: $selectedWaypoint,
@@ -401,6 +516,7 @@ struct OfflineNodeMapView: View {
 			showPointsOfInterest: showPointsOfInterest,
 			tileServer: tileServer,
 			mapTilesAboveLabels: mapTilesAboveLabels,
+			annotationStyle: .node,
 			visibleRegion: $visibleRegion,
 			selectedPosition: $selectedPosition,
 			selectedWaypoint: $selectedWaypoint,

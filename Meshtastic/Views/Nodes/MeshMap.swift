@@ -212,6 +212,7 @@ struct MeshMap: View {
 		})
 		.onFirstAppear {
 			UIApplication.shared.isIdleTimerDisabled = true
+			restoreAppleMapDefaultIfNeeded()
 
 			//	let wayPointEntity = getWaypoint(id: Int64(deepLinkManager.waypointId) ?? -1, context: context)
 			// if wayPointEntity.id > 0 {
@@ -254,5 +255,11 @@ struct MeshMap: View {
 		editingWaypoint!.latitudeI = Int32(coordinate.latitude * 1e7)
 		editingWaypoint!.longitudeI = Int32(coordinate.longitude * 1e7)
 		editingWaypoint!.id = 0
+	}
+
+	private func restoreAppleMapDefaultIfNeeded() {
+		guard selectedMapLayer == .offline else { return }
+		selectedMapLayer = .standard
+		UserDefaults.mapLayer = .standard
 	}
 }

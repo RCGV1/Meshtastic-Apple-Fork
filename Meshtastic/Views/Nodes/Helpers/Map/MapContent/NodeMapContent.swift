@@ -20,7 +20,7 @@ struct NodeMapContent: MapContent {
 	@AppStorage("enableMapConvexHull") private var showConvexHull = false
 	@AppStorage("enableMapTraffic") private var showTraffic: Bool = false
 	@AppStorage("enableMapPointsOfInterest") private var showPointsOfInterest: Bool = false
-	@AppStorage("mapLayer") private var selectedMapLayer: MapLayer = .hybrid
+	@AppStorage("mapLayer") private var selectedMapLayer: MapLayer = .standard
 
 	// Map Configuration
 	@Namespace var mapScope

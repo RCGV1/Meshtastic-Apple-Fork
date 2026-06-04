@@ -19,11 +19,11 @@ struct NodeMapSwiftUI: View {
 	/// Map State User Defaults
 	@AppStorage("enableMapTraffic") private var showTraffic: Bool = false
 	@AppStorage("enableMapPointsOfInterest") private var showPointsOfInterest: Bool = false
-	@AppStorage("mapLayer") private var selectedMapLayer: MapLayer = .hybrid
+	@AppStorage("mapLayer") private var selectedMapLayer: MapLayer = .standard
 	@AppStorage("enableOfflineMaps") private var enableOfflineMaps = false
 	// Map Configuration
 	@Namespace var mapScope
-	@State var mapStyle: MapStyle = MapStyle.hybrid(elevation: .flat, pointsOfInterest: .all, showsTraffic: true)
+	@State var mapStyle: MapStyle = MapStyle.standard(elevation: .flat, pointsOfInterest: .all, showsTraffic: true)
 	@State var position = MapCameraPosition.automatic
 	@State var distance = 10000.0
 	@State private var visibleRegion: MKCoordinateRegion?
@@ -66,6 +66,7 @@ struct NodeMapSwiftUI: View {
 					}
 					.onAppear {
 						UIApplication.shared.isIdleTimerDisabled = true
+						restoreAppleMapDefaultIfNeeded()
 						applyMapLayer(selectedMapLayer)
 						updateMapForCurrentNode()
 					}
@@ -220,6 +221,12 @@ struct NodeMapSwiftUI: View {
 		case .offline:
 			enableOfflineMaps = true
 		}
+	}
+
+	private func restoreAppleMapDefaultIfNeeded() {
+		guard selectedMapLayer == .offline else { return }
+		selectedMapLayer = .standard
+		UserDefaults.mapLayer = .standard
 	}
 
 	private func updateMapForCurrentNode() {
