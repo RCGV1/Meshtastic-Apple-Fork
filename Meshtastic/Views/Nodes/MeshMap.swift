@@ -26,10 +26,12 @@ struct MeshMap: View {
 	@AppStorage("enableMapTraffic") private var showTraffic: Bool = false
 	@AppStorage("enableMapPointsOfInterest") private var showPointsOfInterest: Bool = false
 	@AppStorage("mapLayer") private var selectedMapLayer: MapLayer = .standard
+	@AppStorage("enableOfflineMaps") private var enableOfflineMaps = false
 	// Map Configuration
 	@Namespace var mapScope
 	@State var mapStyle: MapStyle = MapStyle.standard(elevation: .flat, emphasis: MapStyle.StandardEmphasis.muted, pointsOfInterest: .excludingAll, showsTraffic: false)
 	@State var position = MapCameraPosition.automatic
+	@State private var visibleRegion: MKCoordinateRegion?
 	@State private var distance = 10000.0
 	@State private var editingSettings = false
 	@State private var editingFilters = false
@@ -58,67 +60,75 @@ struct MeshMap: View {
 
 		NavigationStack {
 			ZStack {
-				MapReader { reader in
-					Map(
-						position: $position,
-						bounds: MapCameraBounds(minimumDistance: 1, maximumDistance: .infinity),
-						scope: mapScope
-					) {
-						MeshMapContent(
-							showUserLocation: $showUserLocation,
-							showTraffic: $showTraffic,
-							showPointsOfInterest: $showPointsOfInterest,
-							selectedMapLayer: $selectedMapLayer,
-							selectedPosition: $selectedPosition,
-							selectedWaypoint: $selectedWaypoint
-						)
-					}
-					.mapScope(mapScope)
-					.mapStyle(mapStyle)
-					.mapControls {
-						MapScaleView(scope: mapScope)
-							.mapControlVisibility(.automatic)
-						MapPitchToggle(scope: mapScope)
-							.mapControlVisibility(.automatic)
-						MapCompass(scope: mapScope)
-							.mapControlVisibility(.automatic)
-					}
-					.controlSize(.regular)
-					.onMapCameraChange(frequency: MapCameraUpdateFrequency.continuous, { context in
-						distance = context.camera.distance
-					})
-					.onTapGesture(count: 1, perform: { position in
-						newWaypointCoord = reader.convert(position, from: .local) ??  CLLocationCoordinate2D.init()
-					})
-					.gesture(
-						LongPressGesture(minimumDuration: 0.5)
-							.sequenced(before: SpatialTapGesture(coordinateSpace: .local))
-							.onEnded { value in
-							switch value {
-							case let .second(_, tapValue):
-								guard let point = tapValue?.location else {
-									Logger.services.error("Unable to retreive tap location from gesture data.")
-									return
-								}
+				if selectedMapLayer == .offline {
+					OfflineMeshMapView(
+						showUserLocation: $showUserLocation,
+						showTraffic: $showTraffic,
+						showPointsOfInterest: $showPointsOfInterest,
+						visibleRegion: $visibleRegion,
+						selectedPosition: $selectedPosition,
+						selectedWaypoint: $selectedWaypoint,
+						onLongPress: { coordinate in
+							centerMapAt(coordinate: coordinate)
+							createWaypoint(at: coordinate)
+						}
+					)
+				} else {
+					MapReader { reader in
+						Map(
+							position: $position,
+							bounds: MapCameraBounds(minimumDistance: 1, maximumDistance: .infinity),
+							scope: mapScope
+						) {
+							MeshMapContent(
+								showUserLocation: $showUserLocation,
+								showTraffic: $showTraffic,
+								showPointsOfInterest: $showPointsOfInterest,
+								selectedMapLayer: $selectedMapLayer,
+								selectedPosition: $selectedPosition,
+								selectedWaypoint: $selectedWaypoint
+							)
+						}
+						.mapScope(mapScope)
+						.mapStyle(mapStyle)
+						.mapControls {
+							MapScaleView(scope: mapScope)
+								.mapControlVisibility(.automatic)
+							MapPitchToggle(scope: mapScope)
+								.mapControlVisibility(.automatic)
+							MapCompass(scope: mapScope)
+								.mapControlVisibility(.automatic)
+						}
+						.controlSize(.regular)
+						.onMapCameraChange(frequency: MapCameraUpdateFrequency.continuous, { context in
+							distance = context.camera.distance
+							visibleRegion = context.region
+						})
+						.onTapGesture(count: 1, perform: { position in
+							newWaypointCoord = reader.convert(position, from: .local) ??  CLLocationCoordinate2D.init()
+						})
+						.gesture(
+							LongPressGesture(minimumDuration: 0.5)
+								.sequenced(before: SpatialTapGesture(coordinateSpace: .local))
+								.onEnded { value in
+								switch value {
+								case let .second(_, tapValue):
+									guard let point = tapValue?.location else {
+										Logger.services.error("Unable to retreive tap location from gesture data.")
+										return
+									}
 
-								guard let coordinate = reader.convert(point, from: .local) else {
-									Logger.services.error("Unable to convert local point to coordinate on map.")
-									return
+									guard let coordinate = reader.convert(point, from: .local) else {
+										Logger.services.error("Unable to convert local point to coordinate on map.")
+										return
+									}
+									centerMapAt(coordinate: coordinate)
+									createWaypoint(at: coordinate)
+									Logger.services.debug("Long press occured at Lat: \(coordinate.latitude) Long: \(coordinate.longitude)")
+								default: return
 								}
-								centerMapAt(coordinate: coordinate)
-
-								newWaypointCoord = coordinate
-								editingWaypoint = WaypointEntity(context: context)
-								editingWaypoint!.name = "Waypoint Pin"
-								editingWaypoint!.expire = Date.now.addingTimeInterval(60 * 480)
-								editingWaypoint!.latitudeI = Int32((newWaypointCoord?.latitude ?? 0) * 1e7)
-								editingWaypoint!.longitudeI = Int32((newWaypointCoord?.longitude ?? 0) * 1e7)
-								editingWaypoint!.expire = Date.now.addingTimeInterval(60 * 480)
-								editingWaypoint!.id = 0
-								Logger.services.debug("Long press occured at Lat: \(coordinate.latitude) Long: \(coordinate.longitude)")
-							default: return
-							}
-					})
+						})
+					}
 				}
 			}
 			.sheet(item: $selectedPosition) { selection in
@@ -134,7 +144,13 @@ struct MeshMap: View {
 					.padding()
 			}
 			.sheet(isPresented: $editingSettings) {
-				MapSettingsForm(traffic: $showTraffic, pointsOfInterest: $showPointsOfInterest, mapLayer: $selectedMapLayer, meshMap: $isMeshMap)
+				MapSettingsForm(
+					traffic: $showTraffic,
+					pointsOfInterest: $showPointsOfInterest,
+					mapLayer: $selectedMapLayer,
+					meshMap: $isMeshMap,
+					visibleRegion: visibleRegion
+				)
 			}
 			.onChange(of: router.navigationState) {
 				guard case .map = router.navigationState.selectedTab else { return }
@@ -152,7 +168,8 @@ struct MeshMap: View {
 					UserDefaults.mapLayer = newMapLayer
 					mapStyle = MapStyle.imagery(elevation: .realistic)
 				case .offline:
-					return
+					UserDefaults.mapLayer = newMapLayer
+					enableOfflineMaps = true
 				}
 			}
 			.sheet(isPresented: $editingFilters) {
@@ -207,7 +224,7 @@ struct MeshMap: View {
 			case .satellite:
 				mapStyle = MapStyle.imagery(elevation: .realistic)
 			case .offline:
-				mapStyle = MapStyle.hybrid(elevation: .realistic, pointsOfInterest: showPointsOfInterest ? .all : .excludingAll, showsTraffic: showTraffic)
+				enableOfflineMaps = true
 			}
 		}
 		.onDisappear(perform: {
@@ -227,5 +244,15 @@ struct MeshMap: View {
 				)
 			)
 		})
+	}
+
+	private func createWaypoint(at coordinate: CLLocationCoordinate2D) {
+		newWaypointCoord = coordinate
+		editingWaypoint = WaypointEntity(context: context)
+		editingWaypoint!.name = "Waypoint Pin"
+		editingWaypoint!.expire = Date.now.addingTimeInterval(60 * 480)
+		editingWaypoint!.latitudeI = Int32(coordinate.latitude * 1e7)
+		editingWaypoint!.longitudeI = Int32(coordinate.longitude * 1e7)
+		editingWaypoint!.id = 0
 	}
 }
