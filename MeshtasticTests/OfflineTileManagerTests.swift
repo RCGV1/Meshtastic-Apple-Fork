@@ -75,6 +75,21 @@ final class OfflineTileManagerTests: XCTestCase {
 		XCTAssertEqual(estimate.projectedTileBytes, estimate.currentTileBytes + estimate.estimatedBytes)
 	}
 
+	func testOfflineTileOverlayDoesNotUseLiveTileTemplateOrReplaceAppleMap() {
+		let overlay = TileOverlay(tileServer: .openStreetMap, importedTileSourceID: "")
+
+		XCTAssertNil(overlay.urlTemplate)
+		XCTAssertFalse(overlay.canReplaceMapContent)
+		XCTAssertEqual(overlay.minimumZ, 0)
+		XCTAssertGreaterThanOrEqual(overlay.maximumZ, 22)
+	}
+
+	func testOpenStreetMapStoredSourceNormalizesForOfflineDownloads() {
+		XCTAssertEqual(MapTileServer.openStreetMap.normalizedOfflineDownloadSource, .usgsTopo)
+		XCTAssertTrue(MapTileServer.offlineDownloadSources.contains(.usgsTopo))
+		XCTAssertFalse(MapTileServer.offlineDownloadSources.contains(.openStreetMap))
+	}
+
 	func testImportKindRecognizesOfflineMapFiles() throws {
 		XCTAssertEqual(OfflineTileManager.importKind(for: URL(fileURLWithPath: "/tmp/trail.kml")), .kml)
 		XCTAssertEqual(OfflineTileManager.importKind(for: URL(fileURLWithPath: "/tmp/track.gpx")), .gpx)

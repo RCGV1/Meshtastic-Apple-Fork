@@ -9,6 +9,7 @@ import Foundation
 import MapKit
 import OSLog
 import SQLite3
+import UIKit
 
 struct OfflineMapTile: Hashable, Sendable {
 	let x: Int
@@ -283,11 +284,47 @@ class OfflineTileManager: ObservableObject {
 		guard let imported = importedTileSource(id: importedTileSourceID) else {
 			return nil
 		}
+		let tile = OfflineMapTile(x: path.x, y: path.y, z: path.z)
+		if let tileData = try loadImportedTileData(for: tile, imported: imported) {
+			return tileData
+		}
+		return try loadParentTileData(
+			for: tile,
+			minimumZoom: imported.minimumZoom ?? 0,
+			maximumZoom: imported.maximumZoom ?? tile.z,
+			loadTileData: { parentTile in
+				try self.loadImportedTileData(for: parentTile, imported: imported)
+			}
+		)
+	}
+
+	func loadCachedTileOverlay(for path: MKTileOverlayPath, server: MapTileServer = UserDefaults.mapTileServer) throws -> Data {
+		let tile = OfflineMapTile(x: path.x, y: path.y, z: path.z)
+		if server.zoomRange.contains(tile.z), let tileData = try loadCachedTileData(for: tile, server: server) {
+			return tileData
+		}
+
+		let fallbackTileData = try loadParentTileData(
+			for: tile,
+			minimumZoom: server.zoomRange.first ?? 0,
+			maximumZoom: min(server.zoomRange.last ?? tile.z, tile.z),
+			loadTileData: { parentTile in
+				try self.loadCachedTileData(for: parentTile, server: server)
+			}
+		)
+
+		if let fallbackTileData {
+			return fallbackTileData
+		}
+		return try alphaTileData()
+	}
+
+	private func loadImportedTileData(for tile: OfflineMapTile, imported: OfflineMapImport) throws -> Data? {
 		switch imported.kind {
 		case .mbtiles:
-			return try loadMBTile(for: path, imported: imported)
+			return try loadMBTile(for: tile, imported: imported)
 		case .xyzDirectory:
-			return try loadXYZTile(for: path, imported: imported)
+			return try loadXYZTile(for: tile, imported: imported)
 		case .kml, .kmz, .gpx, .geoJSON, .pmtiles, .unknown:
 			return nil
 		}
@@ -415,6 +452,14 @@ class OfflineTileManager: ObservableObject {
 			.appendingPathExtension("png")
 	}
 
+	private func loadCachedTileData(for tile: OfflineMapTile, server: MapTileServer) throws -> Data? {
+		let fileURL = tileFileURL(for: tile, server: server)
+		guard fileManager.fileExists(atPath: fileURL.path) else {
+			return nil
+		}
+		return try Data(contentsOf: fileURL)
+	}
+
 	private func tileURL(for tile: OfflineMapTile, server: MapTileServer) -> URL? {
 		let urlString = server.tileUrl
 			.replacingOccurrences(of: "{z}", with: "\(tile.z)")
@@ -444,16 +489,32 @@ class OfflineTileManager: ObservableObject {
 		}
 
 		var request = URLRequest(url: url)
-		request.setValue("Meshtastic Apple offline maps", forHTTPHeaderField: "User-Agent")
+		request.setValue(Self.tileDownloadUserAgent, forHTTPHeaderField: "User-Agent")
+		request.setValue("image/avif,image/webp,image/png,image/jpeg,image/*;q=0.8", forHTTPHeaderField: "Accept")
 
 		let (data, response) = try await URLSession.shared.data(for: request)
 		if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
 			throw URLError(.badServerResponse)
 		}
+		guard Self.isRenderableTileData(data, response: response) else {
+			throw URLError(.cannotDecodeContentData)
+		}
 
 		createDirectoriesIfNecessary()
 		try data.write(to: tileFileURL(for: tile, server: server), options: .atomic)
 		return data
+	}
+
+	private static var tileDownloadUserAgent: String {
+		let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev"
+		return "MeshtasticApple/\(version) (iOS; https://meshtastic.org)"
+	}
+
+	private static func isRenderableTileData(_ data: Data, response: URLResponse) -> Bool {
+		if response.mimeType?.lowercased().hasPrefix("image/") == true {
+			return true
+		}
+		return UIImage(data: data) != nil
 	}
 
 	private func alphaTileData() throws -> Data {
@@ -591,13 +652,13 @@ class OfflineTileManager: ObservableObject {
 		return metadata
 	}
 
-	private func loadMBTile(for path: MKTileOverlayPath, imported: OfflineMapImport) throws -> Data? {
+	private func loadMBTile(for tile: OfflineMapTile, imported: OfflineMapImport) throws -> Data? {
 		guard let database = openSQLiteDatabase(at: importedFileURL(for: imported)) else {
 			throw OfflineMapImportError.unreadableSQLiteDatabase
 		}
 		defer { sqlite3_close(database) }
 
-		let flippedY = (1 << path.z) - 1 - path.y
+		let flippedY = (1 << tile.z) - 1 - tile.y
 		let sql = "SELECT tile_data FROM tiles WHERE zoom_level = ? AND tile_column = ? AND tile_row = ? LIMIT 1"
 		var statement: OpaquePointer?
 		guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK else {
@@ -605,8 +666,8 @@ class OfflineTileManager: ObservableObject {
 		}
 		defer { sqlite3_finalize(statement) }
 
-		sqlite3_bind_int(statement, 1, Int32(path.z))
-		sqlite3_bind_int(statement, 2, Int32(path.x))
+		sqlite3_bind_int(statement, 1, Int32(tile.z))
+		sqlite3_bind_int(statement, 2, Int32(tile.x))
 		sqlite3_bind_int(statement, 3, Int32(flippedY))
 
 		guard sqlite3_step(statement) == SQLITE_ROW,
@@ -617,15 +678,15 @@ class OfflineTileManager: ObservableObject {
 		return Data(bytes: bytes, count: Int(sqlite3_column_bytes(statement, 0)))
 	}
 
-	private func loadXYZTile(for path: MKTileOverlayPath, imported: OfflineMapImport) throws -> Data? {
+	private func loadXYZTile(for tile: OfflineMapTile, imported: OfflineMapImport) throws -> Data? {
 		let baseURL = importedFileURL(for: imported)
-			.appendingPathComponent("\(path.z)")
-			.appendingPathComponent("\(path.x)")
+			.appendingPathComponent("\(tile.z)")
+			.appendingPathComponent("\(tile.x)")
 		let fileNames = [
-			"\(path.y).png",
-			"\(path.y).jpg",
-			"\(path.y).jpeg",
-			"\(path.y).webp"
+			"\(tile.y).png",
+			"\(tile.y).jpg",
+			"\(tile.y).jpeg",
+			"\(tile.y).webp"
 		]
 
 		for fileName in fileNames {
@@ -636,6 +697,63 @@ class OfflineTileManager: ObservableObject {
 		}
 
 		return nil
+	}
+
+	private func loadParentTileData(
+		for tile: OfflineMapTile,
+		minimumZoom: Int,
+		maximumZoom: Int,
+		loadTileData: (OfflineMapTile) throws -> Data?
+	) throws -> Data? {
+		let highestFallbackZoom = min(maximumZoom, tile.z - 1)
+		guard tile.z > minimumZoom, highestFallbackZoom >= minimumZoom else {
+			return nil
+		}
+
+		for zoom in stride(from: highestFallbackZoom, through: minimumZoom, by: -1) {
+			let zoomDelta = tile.z - zoom
+			guard zoomDelta > 0, zoomDelta < 23 else { continue }
+			let scale = 1 << zoomDelta
+			let parentTile = OfflineMapTile(x: tile.x / scale, y: tile.y / scale, z: zoom)
+			guard let parentData = try loadTileData(parentTile) else {
+				continue
+			}
+			return scaledChildTileData(from: parentData, targetTile: tile, sourceZoom: zoom)
+		}
+
+		return nil
+	}
+
+	private func scaledChildTileData(from data: Data, targetTile: OfflineMapTile, sourceZoom: Int) -> Data? {
+		let zoomDelta = targetTile.z - sourceZoom
+		guard zoomDelta > 0,
+			  zoomDelta < 23,
+			  let image = UIImage(data: data),
+			  let sourceImage = image.cgImage else {
+			return nil
+		}
+
+		let scale = 1 << zoomDelta
+		let cropWidth = CGFloat(sourceImage.width) / CGFloat(scale)
+		let cropHeight = CGFloat(sourceImage.height) / CGFloat(scale)
+		let cropRect = CGRect(
+			x: CGFloat(targetTile.x % scale) * cropWidth,
+			y: CGFloat(targetTile.y % scale) * cropHeight,
+			width: cropWidth,
+			height: cropHeight
+		).integral
+
+		guard let croppedImage = sourceImage.cropping(to: cropRect) else {
+			return nil
+		}
+
+		let format = UIGraphicsImageRendererFormat()
+		format.scale = 1
+		format.opaque = false
+		let renderer = UIGraphicsImageRenderer(size: CGSize(width: 256, height: 256), format: format)
+		return renderer.image { _ in
+			UIImage(cgImage: croppedImage).draw(in: CGRect(x: 0, y: 0, width: 256, height: 256))
+		}.pngData()
 	}
 
 	private func openSQLiteDatabase(at url: URL) -> OpaquePointer? {

@@ -35,6 +35,7 @@ struct MeshMap: View {
 	@State private var distance = 10000.0
 	@State private var editingSettings = false
 	@State private var editingFilters = false
+	@State private var centerOnUserLocationRequest = 0
 	@State var selectedPosition: PositionEntity?
 	@State var editingWaypoint: WaypointEntity?
 	@State var selectedWaypoint: WaypointEntity?
@@ -68,6 +69,7 @@ struct MeshMap: View {
 						visibleRegion: $visibleRegion,
 						selectedPosition: $selectedPosition,
 						selectedWaypoint: $selectedWaypoint,
+						centerOnUserLocationRequest: centerOnUserLocationRequest,
 						onLongPress: { coordinate in
 							centerMapAt(coordinate: coordinate)
 							createWaypoint(at: coordinate)
@@ -157,7 +159,7 @@ struct MeshMap: View {
 				// TODO: handle deep link for waypoints
 			}
 			.onChange(of: selectedMapLayer) { _, newMapLayer in
-				switch selectedMapLayer {
+				switch newMapLayer {
 				case .standard:
 					UserDefaults.mapLayer = newMapLayer
 					mapStyle = MapStyle.standard(elevation: .realistic, pointsOfInterest: showPointsOfInterest ? .all : .excludingAll, showsTraffic: showTraffic)
@@ -191,6 +193,15 @@ struct MeshMap: View {
 			.safeAreaInset(edge: .bottom, alignment: .trailing) {
 				HStack {
 					Spacer()
+					Button(action: centerOnPhoneLocation) {
+						Image(systemName: "location.fill")
+							.padding(.vertical, 5)
+					}
+					.accessibilityLabel("Center on Phone Location")
+					.tint(Color(UIColor.secondarySystemBackground))
+					.foregroundColor(.accentColor)
+					.buttonStyle(.borderedProminent)
+
 					Button(action: {
 						withAnimation {
 							editingSettings = !editingSettings
@@ -245,6 +256,27 @@ struct MeshMap: View {
 				)
 			)
 		})
+	}
+
+	private func centerOnPhoneLocation() {
+		showUserLocation = true
+		requestCurrentPhoneLocation()
+
+		if selectedMapLayer == .offline {
+			centerOnUserLocationRequest += 1
+		} else {
+			withAnimation(.easeInOut(duration: 0.2)) {
+				position = .userLocation(followsHeading: false, fallback: .automatic)
+			}
+		}
+	}
+
+	private func requestCurrentPhoneLocation() {
+		let locationManager = LocationHelper.shared.locationManager
+		if locationManager.authorizationStatus == .notDetermined {
+			locationManager.requestWhenInUseAuthorization()
+		}
+		locationManager.requestLocation()
 	}
 
 	private func createWaypoint(at coordinate: CLLocationCoordinate2D) {

@@ -15,15 +15,10 @@ class TileOverlay: MKTileOverlay {
 	init(tileServer: MapTileServer = UserDefaults.mapTileServer, importedTileSourceID: String = UserDefaults.offlineImportedTileSourceID) {
 		self.tileServer = tileServer
 		self.importedTileSourceID = importedTileSourceID
-		super.init(urlTemplate: importedTileSourceID.isEmpty ? tileServer.tileUrl : nil)
-		canReplaceMapContent = true
-		if let importedTileSource = OfflineTileManager.shared.importedTileSource(id: importedTileSourceID) {
-			minimumZ = importedTileSource.minimumZoom ?? 0
-			maximumZ = importedTileSource.maximumZoom ?? 18
-		} else {
-			minimumZ = tileServer.zoomRange.first ?? 0
-			maximumZ = tileServer.zoomRange.last ?? 18
-		}
+		super.init(urlTemplate: nil)
+		canReplaceMapContent = false
+		minimumZ = 0
+		maximumZ = 22
 	}
 
 	override func loadTile(at path: MKTileOverlayPath) async throws -> Data {
@@ -31,6 +26,6 @@ class TileOverlay: MKTileOverlay {
 			return try OfflineTileManager.shared.loadImportedTileOverlay(for: path, importedTileSourceID: importedTileSourceID)
 				?? OfflineTileManager.shared.transparentTileData()
 		}
-		return try await OfflineTileManager.shared.loadAndCacheTileOverlay(for: path, server: tileServer)
+		return try OfflineTileManager.shared.loadCachedTileOverlay(for: path, server: tileServer)
 	}
 }

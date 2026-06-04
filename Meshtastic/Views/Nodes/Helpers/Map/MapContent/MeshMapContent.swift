@@ -218,6 +218,9 @@ struct MeshMapContent: MapContent {
 
 	@MapContentBuilder
 	var body: some MapContent {
+		if showUserLocation {
+			UserAnnotation()
+		}
 		meshMap
 	}
 }

@@ -31,6 +31,7 @@ struct OfflineMapView: UIViewRepresentable {
 	let use3DElevation: Bool
 	let importedMapContent: OfflineMapImportedContent
 	let annotationStyle: OfflineMapAnnotationStyle
+	let centerOnUserLocationRequest: Int
 	@Binding var visibleRegion: MKCoordinateRegion?
 	@Binding var selectedPosition: PositionEntity?
 	@Binding var selectedWaypoint: WaypointEntity?
@@ -59,6 +60,7 @@ struct OfflineMapView: UIViewRepresentable {
 		configureBaseMap(mapView)
 		configureOverlays(mapView, context: context)
 		configureAnnotations(mapView, context: context)
+		centerOnUserLocationIfNeeded(mapView, context: context)
 	}
 
 	func makeCoordinator() -> Coordinator {
@@ -95,6 +97,36 @@ struct OfflineMapView: UIViewRepresentable {
 		addRoutes(to: mapView)
 		addPrecisionCircles(to: mapView)
 		addConvexHull(to: mapView)
+	}
+
+	private func centerOnUserLocationIfNeeded(_ mapView: MKMapView, context: Context) {
+		guard context.coordinator.centerOnUserLocationRequest != centerOnUserLocationRequest else {
+			return
+		}
+		context.coordinator.centerOnUserLocationRequest = centerOnUserLocationRequest
+		mapView.showsUserLocation = true
+
+		let locationManager = LocationHelper.shared.locationManager
+		if locationManager.authorizationStatus == .notDetermined {
+			locationManager.requestWhenInUseAuthorization()
+		}
+		locationManager.requestLocation()
+
+		guard let coordinate = locationManager.location?.coordinate else {
+			mapView.setUserTrackingMode(.follow, animated: true)
+			return
+		}
+
+		let distance = min(max(mapView.camera.centerCoordinateDistance, 500), 50_000)
+		mapView.setCamera(
+			MKMapCamera(
+				lookingAtCenter: coordinate,
+				fromDistance: distance,
+				pitch: mapView.camera.pitch,
+				heading: mapView.camera.heading
+			),
+			animated: true
+		)
 	}
 
 	private func configureAnnotations(_ mapView: MKMapView, context: Context) {
@@ -199,9 +231,11 @@ struct OfflineMapView: UIViewRepresentable {
 		var tileServer: MapTileServer?
 		var importedTileSourceID: String?
 		var mapTilesAboveLabels: Bool?
+		var centerOnUserLocationRequest: Int
 
 		init(_ parent: OfflineMapView) {
 			self.parent = parent
+			centerOnUserLocationRequest = parent.centerOnUserLocationRequest
 		}
 
 		func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
@@ -485,6 +519,7 @@ struct OfflineMeshMapView: View {
 	@Binding var visibleRegion: MKCoordinateRegion?
 	@Binding var selectedPosition: PositionEntity?
 	@Binding var selectedWaypoint: WaypointEntity?
+	let centerOnUserLocationRequest: Int
 	var onLongPress: (CLLocationCoordinate2D) -> Void
 
 	@AppStorage("meshMapShowNodeHistory") private var showNodeHistory = false
@@ -522,12 +557,13 @@ struct OfflineMeshMapView: View {
 			showUserLocation: showUserLocation,
 			showTraffic: showTraffic,
 			showPointsOfInterest: showPointsOfInterest,
-			tileServer: tileServer,
+			tileServer: tileServer.normalizedOfflineDownloadSource,
 			mapTilesAboveLabels: mapTilesAboveLabels,
 			importedTileSourceID: importedTileSourceID,
 			use3DElevation: use3DElevation,
 			importedMapContent: tileManager.importedMapContent(),
 			annotationStyle: .mesh,
+			centerOnUserLocationRequest: centerOnUserLocationRequest,
 			visibleRegion: $visibleRegion,
 			selectedPosition: $selectedPosition,
 			selectedWaypoint: $selectedWaypoint,
@@ -554,6 +590,7 @@ struct OfflineNodeMapView: View {
 	@Binding var showPointsOfInterest: Bool
 	@Binding var visibleRegion: MKCoordinateRegion?
 	@Binding var selectedPosition: PositionEntity?
+	let centerOnUserLocationRequest: Int
 	@State private var selectedWaypoint: WaypointEntity?
 
 	@AppStorage("meshMapShowNodeHistory") private var showNodeHistory = false
@@ -577,12 +614,13 @@ struct OfflineNodeMapView: View {
 			showUserLocation: showUserLocation,
 			showTraffic: showTraffic,
 			showPointsOfInterest: showPointsOfInterest,
-			tileServer: tileServer,
+			tileServer: tileServer.normalizedOfflineDownloadSource,
 			mapTilesAboveLabels: mapTilesAboveLabels,
 			importedTileSourceID: importedTileSourceID,
 			use3DElevation: use3DElevation,
 			importedMapContent: tileManager.importedMapContent(),
 			annotationStyle: .node,
+			centerOnUserLocationRequest: centerOnUserLocationRequest,
 			visibleRegion: $visibleRegion,
 			selectedPosition: $selectedPosition,
 			selectedWaypoint: $selectedWaypoint,

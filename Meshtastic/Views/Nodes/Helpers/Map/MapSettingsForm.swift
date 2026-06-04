@@ -35,6 +35,7 @@ struct MapSettingsForm: View {
 	@State private var isImportingOfflineMapData = false
 	@State private var importErrorMessage = ""
 	@State private var showImportError = false
+	@State private var showOfflineDownloadDetails = false
 	private let maximumInteractiveDownloadTileCount = 10_000
 
 	var body: some View {
@@ -125,7 +126,7 @@ struct MapSettingsForm: View {
 					LabeledContent("Downloaded Tiles", value: downloadedTileSize)
 					LabeledContent("Imported Data", value: importedDataSize)
 					Toggle(isOn: $enableOfflineMaps) {
-						Label("Enable Offline Maps", systemImage: "square.and.arrow.down")
+						Label("Show Offline Map Data", systemImage: "square.and.arrow.down")
 					}
 					.toggleStyle(SwitchToggleStyle(tint: .accentColor))
 					.onChange(of: enableOfflineMaps) { _, enabled in
@@ -136,9 +137,13 @@ struct MapSettingsForm: View {
 						}
 					}
 
-					Picker("Map Style", selection: $mapTileServer) {
-						ForEach(MapTileServer.allCases) { server in
-							Text(server.description)
+					Text("Apple Maps stays as the base map. Downloaded or imported raster tiles are drawn only where offline data exists, so provider error tiles and blocked live tile screens are not shown during normal map use.")
+						.font(.caption)
+						.foregroundStyle(.secondary)
+
+					Picker("Download Style", selection: $mapTileServer) {
+						ForEach(MapTileServer.offlineDownloadSources) { server in
+							Text(server.offlineDownloadTitle)
 								.tag(server)
 						}
 					}
@@ -147,20 +152,31 @@ struct MapSettingsForm: View {
 						clampZoomRange(to: newServer)
 					}
 
-					Text(LocalizedStringKey(mapTileServer.attribution))
+					Text(mapTileServer.offlineDownloadDescription)
 						.font(.caption)
 						.foregroundStyle(.secondary)
 
-					Toggle(isOn: $mapTilesAboveLabels) {
-						Label("Tiles Above Labels", systemImage: "rectangle.2.swap")
+					DisclosureGroup("Download Details", isExpanded: $showOfflineDownloadDetails) {
+						Stepper("Minimum Zoom \(minimumZoom)", value: $minimumZoom, in: serverMinimumZoom...maximumZoom)
+						Stepper("Maximum Zoom \(maximumZoom)", value: $maximumZoom, in: minimumZoom...serverMaximumZoom)
+						Toggle(isOn: $mapTilesAboveLabels) {
+							Label("Draw Offline Tiles Above Labels", systemImage: "rectangle.2.swap")
+						}
+						.toggleStyle(SwitchToggleStyle(tint: .accentColor))
+						.onChange(of: mapTilesAboveLabels) { _, newValue in
+							UserDefaults.mapTilesAboveLabels = newValue
+						}
+						Toggle(isOn: $use3DElevation) {
+							Label("Use 3D Map Camera", systemImage: "cube.transparent")
+						}
+						.toggleStyle(SwitchToggleStyle(tint: .accentColor))
+						.onChange(of: use3DElevation) { _, newValue in
+							UserDefaults.offlineMapUse3DElevation = newValue
+						}
+						Text("MapKit accepts raster EPSG:3857 offline tiles. Third-party 3D terrain packages can be stored, but Apple MapKit does not consume them as custom offline elevation tiles.")
+							.font(.caption)
+							.foregroundStyle(.secondary)
 					}
-					.toggleStyle(SwitchToggleStyle(tint: .accentColor))
-					.onChange(of: mapTilesAboveLabels) { _, newValue in
-						UserDefaults.mapTilesAboveLabels = newValue
-					}
-
-					Stepper("Minimum Zoom \(minimumZoom)", value: $minimumZoom, in: serverMinimumZoom...maximumZoom)
-					Stepper("Maximum Zoom \(maximumZoom)", value: $maximumZoom, in: minimumZoom...serverMaximumZoom)
 
 					if let visibleRegion {
 						let estimate = tileManager.downloadEstimate(
@@ -219,42 +235,31 @@ struct MapSettingsForm: View {
 								.foregroundStyle(.orange)
 						}
 					}
-
-					Toggle(isOn: $use3DElevation) {
-						Label("Use 3D Map Camera", systemImage: "cube.transparent")
-					}
-					.toggleStyle(SwitchToggleStyle(tint: .accentColor))
-					.onChange(of: use3DElevation) { _, newValue in
-						UserDefaults.offlineMapUse3DElevation = newValue
-					}
-
-					Text("MapKit's custom offline tile API accepts raster EPSG:3857 tiles. Imported or downloaded third-party 3D terrain/elevation tiles cannot be consumed directly yet; this keeps 3D pitch/elevation enabled where Apple MapKit data is available.")
-						.font(.caption)
-						.foregroundStyle(.secondary)
 				}
 
 				Section(header: Text("Offline Imports")) {
 					Button {
 						isImportingOfflineMapData = true
 					} label: {
-						Label("Import KML, GPX, GeoJSON, MBTiles, PMTiles, or XYZ Folder", systemImage: "square.and.arrow.down.on.square")
+						Label("Import Offline Map Data", systemImage: "square.and.arrow.down.on.square")
 					}
 
 					let rasterImports = tileManager.imports.filter(\.supportsRasterTiles)
 					if rasterImports.isEmpty {
-						Text("KML, GPX, and GeoJSON imports render as overlays in offline map mode. Raster MBTiles packages and XYZ tile folders can be selected as the offline tile source after import. PMTiles and vector/3D tile packages are stored and sized, but need a renderer before they can replace the map.")
+						Text("Import KML, GPX, or GeoJSON for offline overlays. Import raster MBTiles or XYZ folders to use them as offline map tiles. PMTiles and 3D packages are stored and sized, but need a renderer before they can replace the map.")
 							.font(.caption)
 							.foregroundStyle(.secondary)
 					} else {
-						Picker("Imported Tile Source", selection: $importedTileSourceID) {
-							Text("Downloaded Map Style").tag("")
-							ForEach(rasterImports) { imported in
-								Text(imported.displayName).tag(imported.id)
-							}
+						Button {
+							importedTileSourceID = ""
+							UserDefaults.offlineImportedTileSourceID = ""
+						} label: {
+							Label(
+								importedTileSourceID.isEmpty ? "Using Downloaded Tiles" : "Use Downloaded Tiles",
+								systemImage: importedTileSourceID.isEmpty ? "checkmark.circle.fill" : "arrow.down.map"
+							)
 						}
-						.onChange(of: importedTileSourceID) { _, newValue in
-							UserDefaults.offlineImportedTileSourceID = newValue
-						}
+						.buttonStyle(.borderless)
 					}
 
 					ForEach(tileManager.imports) { imported in
@@ -268,6 +273,18 @@ struct MapSettingsForm: View {
 							Text(imported.importDetail)
 								.font(.caption)
 								.foregroundStyle(.secondary)
+							if imported.supportsRasterTiles {
+								Button {
+									importedTileSourceID = imported.id
+									UserDefaults.offlineImportedTileSourceID = imported.id
+								} label: {
+									Label(
+										importedTileSourceID == imported.id ? "Using as Offline Tiles" : "Use as Offline Tiles",
+										systemImage: importedTileSourceID == imported.id ? "checkmark.circle.fill" : "map"
+									)
+								}
+								.buttonStyle(.borderless)
+							}
 							Button(role: .destructive) {
 								tileManager.removeImport(id: imported.id)
 								refreshStorageSizes()
@@ -280,6 +297,7 @@ struct MapSettingsForm: View {
 				}
 			}
 			.onAppear {
+				normalizeDownloadSourceIfNeeded()
 				clampZoomRange(to: mapTileServer)
 				refreshStorageSizes()
 			}
@@ -319,6 +337,12 @@ Spacer()
 	private func refreshStorageSizes() {
 		downloadedTileSize = tileManager.getAllDownloadedSize()
 		importedDataSize = tileManager.formattedByteCount(tileManager.importedDataByteCount())
+	}
+
+	private func normalizeDownloadSourceIfNeeded() {
+		guard !MapTileServer.offlineDownloadSources.contains(mapTileServer) else { return }
+		mapTileServer = .defaultOfflineDownloadSource
+		UserDefaults.mapTileServer = .defaultOfflineDownloadSource
 	}
 
 	private func handleOfflineImport(_ result: Result<[URL], Error>) {

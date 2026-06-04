@@ -33,6 +33,7 @@ struct NodeMapSwiftUI: View {
 	@State var isEditingSettings = false
 	@State var isMeshMap = false
 	@State private var selectedPosition: PositionEntity?
+	@State private var centerOnUserLocationRequest = 0
 
 	@State private var mapRegion = MKCoordinateRegion.init()
 
@@ -97,7 +98,8 @@ struct NodeMapSwiftUI: View {
 				showTraffic: $showTraffic,
 				showPointsOfInterest: $showPointsOfInterest,
 				visibleRegion: $visibleRegion,
-				selectedPosition: $selectedPosition
+				selectedPosition: $selectedPosition,
+				centerOnUserLocationRequest: centerOnUserLocationRequest
 			)
 		} else {
 			swiftUIMap
@@ -107,6 +109,9 @@ struct NodeMapSwiftUI: View {
 	private var swiftUIMap: some View {
 		Map(position: $position, bounds: MapCameraBounds(minimumDistance: 0, maximumDistance: .infinity), scope: mapScope) {
 			NodeMapContent(node: node)
+			if showUserLocation {
+				UserAnnotation()
+			}
 		}
 		.mapScope(mapScope)
 		.mapStyle(mapStyle)
@@ -163,6 +168,15 @@ struct NodeMapSwiftUI: View {
 
 	private var mapActionButtons: some View {
 		HStack {
+			Button(action: centerOnPhoneLocation) {
+				Image(systemName: "location.fill")
+					.padding(.vertical, 5)
+			}
+			.accessibilityLabel("Center on Phone Location")
+			.tint(Color(UIColor.secondarySystemBackground))
+			.foregroundColor(.accentColor)
+			.buttonStyle(.borderedProminent)
+
 			Button(action: {
 				withAnimation {
 					isEditingSettings.toggle()
@@ -221,6 +235,27 @@ struct NodeMapSwiftUI: View {
 		case .offline:
 			enableOfflineMaps = true
 		}
+	}
+
+	private func centerOnPhoneLocation() {
+		showUserLocation = true
+		requestCurrentPhoneLocation()
+
+		if selectedMapLayer == .offline {
+			centerOnUserLocationRequest += 1
+		} else {
+			withAnimation(.easeInOut(duration: 0.2)) {
+				position = .userLocation(followsHeading: false, fallback: .automatic)
+			}
+		}
+	}
+
+	private func requestCurrentPhoneLocation() {
+		let locationManager = LocationHelper.shared.locationManager
+		if locationManager.authorizationStatus == .notDetermined {
+			locationManager.requestWhenInUseAuthorization()
+		}
+		locationManager.requestLocation()
 	}
 
 	private func restoreAppleMapDefaultIfNeeded() {

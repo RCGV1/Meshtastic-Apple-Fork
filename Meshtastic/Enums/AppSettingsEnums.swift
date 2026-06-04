@@ -279,6 +279,50 @@ enum OverlayType: String, CaseIterable, Equatable {
 	var localized: String { self.rawValue.localized }
 }
 
+extension MapTileServer {
+	static var defaultOfflineDownloadSource: MapTileServer {
+		.usgsTopo
+	}
+
+	static var offlineDownloadSources: [MapTileServer] {
+		[
+			.usgsTopo,
+			.usgsImageryTopo,
+			.usgsImageryOnly
+		]
+	}
+
+	var normalizedOfflineDownloadSource: MapTileServer {
+		Self.offlineDownloadSources.contains(self) ? self : Self.defaultOfflineDownloadSource
+	}
+
+	var offlineDownloadTitle: String {
+		switch self {
+		case .usgsTopo:
+			return "Topographic"
+		case .usgsImageryTopo:
+			return "Satellite + Labels"
+		case .usgsImageryOnly:
+			return "Satellite"
+		default:
+			return description
+		}
+	}
+
+	var offlineDownloadDescription: String {
+		switch self {
+		case .usgsTopo:
+			return "Downloads USGS topographic raster tiles for the visible area."
+		case .usgsImageryTopo:
+			return "Downloads USGS imagery with topographic labels for the visible area."
+		case .usgsImageryOnly:
+			return "Downloads USGS imagery-only raster tiles for the visible area."
+		default:
+			return "Downloads raster tiles for the visible area."
+		}
+	}
+}
+
 enum MapOverlayServer: String, CaseIterable, Identifiable, Decodable {
 	case baseReReflectivityCurrent
 	case baseReReflectivityOneHourAgo
