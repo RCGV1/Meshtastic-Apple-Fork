@@ -77,7 +77,12 @@ class OfflineTileManager: ObservableObject {
 			defer {
 				Task { @MainActor in self.status = .downloaded }
 			}
-			return try await downloadTileData(tile, server: server)
+			do {
+				return try await downloadTileData(tile, server: server)
+			} catch {
+				Logger.services.error("Failed to load offline map tile z\(tile.z) x\(tile.x) y\(tile.y): \(error.localizedDescription, privacy: .public)")
+				return try alphaTileData()
+			}
 		} catch {
 			Logger.services.error("Failed to read cached offline map tile: \(error.localizedDescription, privacy: .public)")
 			return try alphaTileData()
@@ -185,15 +190,18 @@ class OfflineTileManager: ObservableObject {
 
 	private func downloadTileData(_ tile: OfflineMapTile, server: MapTileServer) async throws -> Data {
 		guard let url = tileURL(for: tile, server: server) else {
-			return try alphaTileData()
+			throw URLError(.badURL)
 		}
 
-		let (data, response) = try await URLSession.shared.data(from: url)
+		var request = URLRequest(url: url)
+		request.setValue("Meshtastic Apple offline maps", forHTTPHeaderField: "User-Agent")
+
+		let (data, response) = try await URLSession.shared.data(for: request)
 		if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
-			Logger.services.error("Offline map tile returned HTTP \(httpResponse.statusCode, privacy: .public)")
-			return try alphaTileData()
+			throw URLError(.badServerResponse)
 		}
 
+		createDirectoriesIfNecessary()
 		try data.write(to: tileFileURL(for: tile, server: server), options: .atomic)
 		return data
 	}

@@ -27,6 +27,7 @@ struct MapSettingsForm: View {
 	@AppStorage("mapTilesAboveLabels") private var mapTilesAboveLabels = false
 	@State private var minimumZoom = 8
 	@State private var maximumZoom = 14
+	@State private var downloadedTileSize = "0MB"
 	private let maximumInteractiveDownloadTileCount = 10_000
 
 	var body: some View {
@@ -114,6 +115,7 @@ struct MapSettingsForm: View {
 					}
 				}
 				Section(header: Text("Offline Maps")) {
+					LabeledContent("Downloaded Tiles", value: downloadedTileSize)
 					Toggle(isOn: $enableOfflineMaps) {
 						Label("Enable Offline Maps", systemImage: "square.and.arrow.down")
 					}
@@ -176,6 +178,7 @@ struct MapSettingsForm: View {
 									server: mapTileServer,
 									zoomRange: minimumZoom...maximumZoom
 								)
+								downloadedTileSize = tileManager.getAllDownloadedSize()
 							}
 						} label: {
 							Label("Download Current Map Area", systemImage: "arrow.down.map")
@@ -203,6 +206,7 @@ struct MapSettingsForm: View {
 			}
 			.onAppear {
 				clampZoomRange(to: mapTileServer)
+				downloadedTileSize = tileManager.getAllDownloadedSize()
 			}
 
 #if targetEnvironment(macCatalyst)
