@@ -58,9 +58,11 @@ extension UserDefaults {
 		case enableMapPointsOfInterest
 		case enableOfflineMaps
 		case mapTileServer
+		case offlineImportedTileSourceID
 		case enableOverlayServer
 		case mapOverlayServer
 		case mapTilesAboveLabels
+		case offlineMapUse3DElevation
 		case mapUseLegacy
 		case enableDetectionNotifications
 		case detectionSensorRole
@@ -124,6 +126,9 @@ extension UserDefaults {
 	@UserDefault(.mapTileServer, defaultValue: .openStreetMap)
 	static var mapTileServer: MapTileServer
 
+	@UserDefault(.offlineImportedTileSourceID, defaultValue: "")
+	static var offlineImportedTileSourceID: String
+
 	@UserDefault(.enableOverlayServer, defaultValue: false)
 	static var enableOverlayServer: Bool
 
@@ -132,6 +137,9 @@ extension UserDefaults {
 
 	@UserDefault(.mapTilesAboveLabels, defaultValue: false)
 	static var mapTilesAboveLabels: Bool
+
+	@UserDefault(.offlineMapUse3DElevation, defaultValue: false)
+	static var offlineMapUse3DElevation: Bool
 
 	@UserDefault(.mapUseLegacy, defaultValue: false)
 	static var mapUseLegacy: Bool

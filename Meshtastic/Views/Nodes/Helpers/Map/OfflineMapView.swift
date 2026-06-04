@@ -27,6 +27,9 @@ struct OfflineMapView: UIViewRepresentable {
 	let showPointsOfInterest: Bool
 	let tileServer: MapTileServer
 	let mapTilesAboveLabels: Bool
+	let importedTileSourceID: String
+	let use3DElevation: Bool
+	let importedMapContent: OfflineMapImportedContent
 	let annotationStyle: OfflineMapAnnotationStyle
 	@Binding var visibleRegion: MKCoordinateRegion?
 	@Binding var selectedPosition: PositionEntity?
@@ -67,22 +70,27 @@ struct OfflineMapView: UIViewRepresentable {
 		mapView.showsTraffic = showTraffic
 		mapView.showsUserLocation = showUserLocation
 		mapView.pointOfInterestFilter = showPointsOfInterest ? .includingAll : .excludingAll
-		mapView.preferredConfiguration.elevationStyle = .flat
+		mapView.preferredConfiguration.elevationStyle = use3DElevation ? .realistic : .flat
 	}
 
 	private func configureOverlays(_ mapView: MKMapView, context: Context) {
 		let nonTileOverlays = mapView.overlays.filter { !($0 is TileOverlay) }
 		mapView.removeOverlays(nonTileOverlays)
 
-		if context.coordinator.tileServer != tileServer || context.coordinator.mapTilesAboveLabels != mapTilesAboveLabels || !mapView.overlays.contains(where: { $0 is TileOverlay }) {
+		if context.coordinator.tileServer != tileServer ||
+			context.coordinator.importedTileSourceID != importedTileSourceID ||
+			context.coordinator.mapTilesAboveLabels != mapTilesAboveLabels ||
+			!mapView.overlays.contains(where: { $0 is TileOverlay }) {
 			let tileOverlays = mapView.overlays.filter { $0 is TileOverlay }
 			mapView.removeOverlays(tileOverlays)
-			let tileOverlay = TileOverlay(tileServer: tileServer)
+			let tileOverlay = TileOverlay(tileServer: tileServer, importedTileSourceID: importedTileSourceID)
 			mapView.addOverlay(tileOverlay, level: mapTilesAboveLabels ? .aboveLabels : .aboveRoads)
 			context.coordinator.tileServer = tileServer
+			context.coordinator.importedTileSourceID = importedTileSourceID
 			context.coordinator.mapTilesAboveLabels = mapTilesAboveLabels
 		}
 
+		addImportedMapContent(to: mapView)
 		addNodeRouteLines(to: mapView)
 		addRoutes(to: mapView)
 		addPrecisionCircles(to: mapView)
@@ -98,6 +106,7 @@ struct OfflineMapView: UIViewRepresentable {
 		if showWaypoints {
 			mapView.addAnnotations(waypoints)
 		}
+		mapView.addAnnotations(importedMapContent.annotations)
 
 		guard !context.coordinator.didSetInitialRegion else { return }
 		context.coordinator.didSetInitialRegion = true
@@ -178,10 +187,17 @@ struct OfflineMapView: UIViewRepresentable {
 		mapView.addOverlay(polygon, level: .aboveLabels)
 	}
 
+	private func addImportedMapContent(to mapView: MKMapView) {
+		for overlay in importedMapContent.overlays {
+			mapView.addOverlay(overlay, level: .aboveLabels)
+		}
+	}
+
 	final class Coordinator: NSObject, MKMapViewDelegate {
 		var parent: OfflineMapView
 		var didSetInitialRegion = false
 		var tileServer: MapTileServer?
+		var importedTileSourceID: String?
 		var mapTilesAboveLabels: Bool?
 
 		init(_ parent: OfflineMapView) {
@@ -213,6 +229,10 @@ struct OfflineMapView: UIViewRepresentable {
 				return waypointAnnotationView(for: waypoint, in: mapView)
 			}
 
+			if let importedAnnotation = annotation as? OfflineImportedPointAnnotation {
+				return importedAnnotationView(for: importedAnnotation, in: mapView)
+			}
+
 			return nil
 		}
 
@@ -223,7 +243,10 @@ struct OfflineMapView: UIViewRepresentable {
 
 			if let polyline = overlay as? MKPolyline {
 				let renderer = MKPolylineRenderer(polyline: polyline)
-				if polyline.title?.hasPrefix("route-") == true {
+				if polyline.title?.hasPrefix("offline-import:") == true {
+					renderer.strokeColor = UIColor.systemTeal
+					renderer.lineWidth = 4
+				} else if polyline.title?.hasPrefix("route-") == true {
 					let colorString = polyline.title?.replacingOccurrences(of: "route-", with: "") ?? "0"
 					renderer.strokeColor = UIColor(hex: UInt32(colorString) ?? 0)
 					renderer.lineWidth = 3
@@ -232,6 +255,13 @@ struct OfflineMapView: UIViewRepresentable {
 					renderer.lineWidth = 4
 					renderer.lineDashPattern = [10, 8]
 				}
+				return renderer
+			}
+
+			if let multiPolyline = overlay as? MKMultiPolyline {
+				let renderer = MKMultiPolylineRenderer(multiPolyline: multiPolyline)
+				renderer.strokeColor = UIColor.systemTeal
+				renderer.lineWidth = 4
 				return renderer
 			}
 
@@ -246,8 +276,21 @@ struct OfflineMapView: UIViewRepresentable {
 
 			if let polygon = overlay as? MKPolygon {
 				let renderer = MKPolygonRenderer(polygon: polygon)
-				renderer.fillColor = UIColor.systemIndigo.withAlphaComponent(0.25)
-				renderer.strokeColor = UIColor.systemBlue
+				if polygon.title?.hasPrefix("offline-import:") == true {
+					renderer.fillColor = UIColor.systemTeal.withAlphaComponent(0.2)
+					renderer.strokeColor = UIColor.systemTeal
+				} else {
+					renderer.fillColor = UIColor.systemIndigo.withAlphaComponent(0.25)
+					renderer.strokeColor = UIColor.systemBlue
+				}
+				renderer.lineWidth = 3
+				return renderer
+			}
+
+			if let multiPolygon = overlay as? MKMultiPolygon {
+				let renderer = MKMultiPolygonRenderer(multiPolygon: multiPolygon)
+				renderer.fillColor = UIColor.systemTeal.withAlphaComponent(0.2)
+				renderer.strokeColor = UIColor.systemTeal
 				renderer.lineWidth = 3
 				return renderer
 			}
@@ -284,6 +327,17 @@ struct OfflineMapView: UIViewRepresentable {
 			view.displayPriority = .required
 			view.rightCalloutAccessoryView = UIButton(type: .detailDisclosure)
 			view.setContent(OfflineWaypointAnnotation(waypoint: waypoint), size: CGSize(width: 44, height: 44))
+			return view
+		}
+
+		private func importedAnnotationView(for annotation: OfflineImportedPointAnnotation, in mapView: MKMapView) -> MKAnnotationView {
+			let view = mapView.dequeueReusableAnnotationView(withIdentifier: "offline-import-point") as? MKMarkerAnnotationView
+				?? MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: "offline-import-point")
+			view.annotation = annotation
+			view.canShowCallout = true
+			view.markerTintColor = UIColor.systemTeal
+			view.glyphImage = UIImage(systemName: "map")
+			view.displayPriority = .defaultHigh
 			return view
 		}
 	}
@@ -439,6 +493,9 @@ struct OfflineMeshMapView: View {
 	@AppStorage("enableMapWaypoints") private var showWaypoints = false
 	@AppStorage("mapTileServer") private var tileServer: MapTileServer = .openStreetMap
 	@AppStorage("mapTilesAboveLabels") private var mapTilesAboveLabels = false
+	@AppStorage("offlineImportedTileSourceID") private var importedTileSourceID = ""
+	@AppStorage("offlineMapUse3DElevation") private var use3DElevation = false
+	@ObservedObject private var tileManager = OfflineTileManager.shared
 
 	@FetchRequest(fetchRequest: PositionEntity.allPositionsFetchRequest(), animation: .easeIn)
 	var positions: FetchedResults<PositionEntity>
@@ -467,6 +524,9 @@ struct OfflineMeshMapView: View {
 			showPointsOfInterest: showPointsOfInterest,
 			tileServer: tileServer,
 			mapTilesAboveLabels: mapTilesAboveLabels,
+			importedTileSourceID: importedTileSourceID,
+			use3DElevation: use3DElevation,
+			importedMapContent: tileManager.importedMapContent(),
 			annotationStyle: .mesh,
 			visibleRegion: $visibleRegion,
 			selectedPosition: $selectedPosition,
@@ -501,6 +561,9 @@ struct OfflineNodeMapView: View {
 	@AppStorage("enableMapConvexHull") private var showConvexHull = false
 	@AppStorage("mapTileServer") private var tileServer: MapTileServer = .openStreetMap
 	@AppStorage("mapTilesAboveLabels") private var mapTilesAboveLabels = false
+	@AppStorage("offlineImportedTileSourceID") private var importedTileSourceID = ""
+	@AppStorage("offlineMapUse3DElevation") private var use3DElevation = false
+	@ObservedObject private var tileManager = OfflineTileManager.shared
 
 	var body: some View {
 		OfflineMapView(
@@ -516,6 +579,9 @@ struct OfflineNodeMapView: View {
 			showPointsOfInterest: showPointsOfInterest,
 			tileServer: tileServer,
 			mapTilesAboveLabels: mapTilesAboveLabels,
+			importedTileSourceID: importedTileSourceID,
+			use3DElevation: use3DElevation,
+			importedMapContent: tileManager.importedMapContent(),
 			annotationStyle: .node,
 			visibleRegion: $visibleRegion,
 			selectedPosition: $selectedPosition,

@@ -57,4 +57,35 @@ final class OfflineTileManagerTests: XCTestCase {
 		XCTAssertGreaterThanOrEqual(widerZoomCount, lowZoomCount)
 		XCTAssertGreaterThan(widerZoomCount, 0)
 	}
+
+	func testDownloadEstimateIncludesProjectedStorage() {
+		let region = MKCoordinateRegion(
+			center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
+			span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
+		)
+
+		let estimate = OfflineTileManager.shared.downloadEstimate(
+			in: region,
+			server: .openStreetMap,
+			zoomRange: 8...10
+		)
+
+		XCTAssertGreaterThan(estimate.tileCount, 0)
+		XCTAssertGreaterThan(estimate.estimatedBytes, 0)
+		XCTAssertEqual(estimate.projectedTileBytes, estimate.currentTileBytes + estimate.estimatedBytes)
+	}
+
+	func testImportKindRecognizesOfflineMapFiles() throws {
+		XCTAssertEqual(OfflineTileManager.importKind(for: URL(fileURLWithPath: "/tmp/trail.kml")), .kml)
+		XCTAssertEqual(OfflineTileManager.importKind(for: URL(fileURLWithPath: "/tmp/track.gpx")), .gpx)
+		XCTAssertEqual(OfflineTileManager.importKind(for: URL(fileURLWithPath: "/tmp/shape.geojson")), .geoJSON)
+		XCTAssertEqual(OfflineTileManager.importKind(for: URL(fileURLWithPath: "/tmp/bay.mbtiles")), .mbtiles)
+		XCTAssertEqual(OfflineTileManager.importKind(for: URL(fileURLWithPath: "/tmp/archive.pmtiles")), .pmtiles)
+
+		let directoryURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+		try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+		defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+		XCTAssertEqual(OfflineTileManager.importKind(for: directoryURL), .xyzDirectory)
+	}
 }
