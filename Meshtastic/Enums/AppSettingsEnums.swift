@@ -143,7 +143,7 @@ enum MapLayer: String, CaseIterable, Equatable, Decodable {
 	var localized: String { self.rawValue.localized }
 }
 
-enum MapTileServer: String, CaseIterable, Identifiable, Decodable {
+enum MapTileServer: String, CaseIterable, Identifiable, Codable {
 	case openStreetMap
 	case openStreetMapDE
 	case openStreetMapFR
@@ -276,6 +276,97 @@ enum OverlayType: String, CaseIterable, Equatable {
 	case tileServer
 	case geoJson
 	var localized: String { self.rawValue.localized }
+}
+
+enum OfflineVectorMapStyle: String, CaseIterable, Identifiable, Codable {
+	case liberty
+	case bright
+	case positron
+	case dark
+	case fiord
+
+	var id: String { rawValue }
+
+	var displayName: String {
+		switch self {
+		case .liberty:
+			return "Liberty"
+		case .bright:
+			return "Bright"
+		case .positron:
+			return "Positron"
+		case .dark:
+			return "Dark"
+		case .fiord:
+			return "Fiord"
+		}
+	}
+
+	var detail: String {
+		switch self {
+		case .liberty:
+			return "Balanced default OpenStreetMap style with full labels."
+		case .bright:
+			return "High-contrast, colorful OpenStreetMap style."
+		case .positron:
+			return "Light, minimal style with fewer visual distractions."
+		case .dark:
+			return "Dark OpenStreetMap style for low-light use."
+		case .fiord:
+			return "Muted dark-blue OpenStreetMap style."
+		}
+	}
+
+	var styleURL: URL {
+		URL(string: "https://tiles.openfreemap.org/styles/\(rawValue)")!
+	}
+}
+
+extension MapTileServer {
+	static let maximumNativeOfflineZoom = 22
+
+	static var defaultOfflineDownloadSource: MapTileServer {
+		.openStreetMap
+	}
+
+	static var offlineDownloadSources: [MapTileServer] {
+		[.openStreetMap]
+	}
+
+	var normalizedOfflineDownloadSource: MapTileServer {
+		Self.offlineDownloadSources.contains(self) ? self : Self.defaultOfflineDownloadSource
+	}
+
+	var offlineDisplayZoomRange: ClosedRange<Int> {
+		let minimum = zoomRange.first ?? 0
+		return minimum...Self.maximumNativeOfflineZoom
+	}
+
+	var supportsVectorOfflineRendering: Bool {
+		self == .openStreetMap
+	}
+
+	var supportsNativeRasterOfflineRendering: Bool {
+		Self.offlineDownloadSources.contains(self)
+	}
+
+	var offlineDownloadTitle: String {
+		switch self {
+		case .openStreetMap:
+			return "MapLibre OpenStreetMap"
+		default:
+			return description
+		}
+	}
+
+	var offlineDownloadDescription: String {
+		switch self {
+		case .openStreetMap:
+			return "Downloads the selected OpenStreetMap area and uses MapLibre/OpenFreeMap styles for native rendering."
+		default:
+			return "Downloads raster tiles for the visible area."
+		}
+	}
 }
 
 enum MapOverlayServer: String, CaseIterable, Identifiable, Decodable {

@@ -24,6 +24,8 @@ struct MeshMap: View {
 	@Environment(\.supportsMultipleWindows) private var supportsMultipleWindows
 	@Environment(\.openWindow) private var openWindow
 	@EnvironmentObject var accessoryManager: AccessoryManager
+	@ObservedObject private var tileManager = OfflineTileManager.shared
+	@ObservedObject private var offlineConnectivity = OfflineMapConnectivityMonitor.shared
 
 	@ObservedObject
 	var router: Router
@@ -31,10 +33,12 @@ struct MeshMap: View {
 
 	/// Parameters
 	@State var showUserLocation: Bool = true
+	@State private var showUserHeading = false
 	/// Map State User Defaults
 	@AppStorage("enableMapTraffic") private var showTraffic: Bool = false
 	@AppStorage("enableMapPointsOfInterest") private var showPointsOfInterest: Bool = false
 	@AppStorage("mapLayer") private var selectedMapLayer: MapLayer = .standard
+	@AppStorage("enableOfflineMaps") private var enableOfflineMaps = false
 	/// Map overlay configs
 	@State private var enabledOverlayConfigs: Set<UUID> = []
 	// Map Configuration
@@ -46,7 +50,12 @@ struct MeshMap: View {
 	@State private var visibleRegion: MKCoordinateRegion?
 	@State private var editingSettings = false
 	@State private var editingFilters = false
+	@State private var centerOnUserLocationRequest = 0
+	@State private var offlineDownloadSelection = OfflineMapDownloadSelectionOverlay.defaultSelection
+	@State private var showingOfflineDownloadWorkflow = false
+	@State private var showingOfflineDownloadConfiguration = false
 	@State var selectedNode: MeshMapSelectedNode?
+	@State private var selectedPosition: PositionEntity?
 	@State private var visiblePositionSnapshots: [MeshMapPositionSnapshot] = []
 	@State var editingWaypoint: WaypointEntity?
 	@State var selectedWaypoint: WaypointEntity?
@@ -61,6 +70,13 @@ struct MeshMap: View {
 
 	@Query(filter: #Predicate<PositionEntity> { $0.nodePosition != nil && $0.latest == true && $0.nodePosition?.ignored != true })
 	private var allLatestPositions: [PositionEntity]
+
+	@Query(sort: \WaypointEntity.name, order: .reverse)
+	private var waypoints: [WaypointEntity]
+
+	@Query(filter: #Predicate<RouteEntity> { $0.enabled == true },
+		   sort: \RouteEntity.name)
+	private var routes: [RouteEntity]
 
 	/// Positions filtered once per render using the full NodeFilterParameters.
 	private func filteredPositions(from positions: [PositionEntity]) -> [PositionEntity] {
@@ -130,6 +146,74 @@ struct MeshMap: View {
 		return MeshMapVisiblePositionState(positions: positions, key: key)
 	}
 
+	@ViewBuilder
+	private func offlineMapOverlay(positionState: MeshMapVisiblePositionState) -> some View {
+		if selectedMapLayer == .offline {
+			OfflineMeshMapView(
+				positions: positionState.positions,
+				waypoints: waypoints,
+				routes: routes,
+				showUserLocation: $showUserLocation,
+				showUserHeading: $showUserHeading,
+				showTraffic: $showTraffic,
+				showPointsOfInterest: $showPointsOfInterest,
+				visibleRegion: $visibleRegion,
+				selectedPosition: $selectedPosition,
+				selectedWaypoint: $selectedWaypoint,
+				centerOnUserLocationRequest: centerOnUserLocationRequest,
+				onLongPress: handleOfflineLongPress
+			)
+			.ignoresSafeArea()
+		}
+	}
+
+	@ViewBuilder
+	private var offlineDownloadSelectionLayer: some View {
+		if showingOfflineDownloadWorkflow {
+			OfflineMapDownloadSelectionOverlay(selection: $offlineDownloadSelection)
+				.ignoresSafeArea()
+				.transition(.opacity)
+		}
+	}
+
+	@ViewBuilder
+	private var offlineDownloadControlsLayer: some View {
+		if showingOfflineDownloadWorkflow {
+			OfflineMapDownloadSelectionControls(
+				isSelecting: $showingOfflineDownloadWorkflow,
+				isConfiguring: $showingOfflineDownloadConfiguration,
+				selection: offlineDownloadSelection,
+				visibleRegion: visibleRegion
+			)
+			.transition(.move(edge: .top).combined(with: .opacity))
+		}
+	}
+
+	@ViewBuilder
+	private var offlineMapAvailablePromptLayer: some View {
+		if shouldShowOfflineMapAvailablePrompt {
+			VStack {
+				OfflineMapAvailablePrompt {
+					switchToAvailableOfflineMap()
+				}
+				.padding(.top, 10)
+				Spacer()
+			}
+			.transition(.move(edge: .top).combined(with: .opacity))
+		}
+	}
+
+	private func handleOfflineLongPress(coordinate: CLLocationCoordinate2D) {
+		centerMapAt(coordinate: coordinate)
+		newWaypointCoord = coordinate
+		editingWaypoint = WaypointEntity()
+		editingWaypoint?.name = "Waypoint Pin"
+		editingWaypoint?.expire = Date.now.addingTimeInterval(60 * 480)
+		editingWaypoint?.latitudeI = Int32(coordinate.latitude * 1e7)
+		editingWaypoint?.longitudeI = Int32(coordinate.longitude * 1e7)
+		editingWaypoint?.id = 0
+	}
+
 	var body: some View {
 		let positionState = visiblePositionState
 		NavigationStack {
@@ -153,15 +237,19 @@ struct MeshMap: View {
 					}
 					.id(meshMapDistance)
 					.mapScope(mapScope)
-					.mapStyle(mapStyle)
-					.mapControls {
-						MapScaleView(scope: mapScope)
-							.mapControlVisibility(.automatic)
-						MapPitchToggle(scope: mapScope)
-							.mapControlVisibility(.automatic)
-						MapCompass(scope: mapScope)
-							.mapControlVisibility(.automatic)
-					}
+						.mapStyle(mapStyle)
+						.mapControls {
+							if selectedMapLayer != .offline {
+								MapScaleView(scope: mapScope)
+									.mapControlVisibility(.automatic)
+								MapUserLocationButton(scope: mapScope)
+									.mapControlVisibility(.automatic)
+								MapPitchToggle(scope: mapScope)
+									.mapControlVisibility(.automatic)
+								MapCompass(scope: mapScope)
+									.mapControlVisibility(.automatic)
+							}
+						}
 					.controlSize(.regular)
 					.offset(y: 100)
 						.onMapCameraChange(frequency: MapCameraUpdateFrequency.onEnd, { context in
@@ -203,6 +291,20 @@ struct MeshMap: View {
 							}
 					)
 					.ignoresSafeArea()
+						.opacity(selectedMapLayer == .offline ? 0 : 1)
+						.allowsHitTesting(selectedMapLayer != .offline)
+						.overlay {
+							offlineMapOverlay(positionState: positionState)
+						}
+						.overlay {
+							offlineDownloadSelectionLayer
+						}
+						.overlay(alignment: .top) {
+							offlineDownloadControlsLayer
+						}
+						.overlay(alignment: .top) {
+							offlineMapAvailablePromptLayer
+						}
 				}
 				.sheet(item: $selectedNode) { selection in
 					if let node = getNodeInfo(id: selection.id, context: context) {
@@ -229,7 +331,11 @@ struct MeshMap: View {
 						.presentationDragIndicator(.visible)
 						#endif
 					}
-				}
+					}
+					.sheet(item: $selectedPosition) { selection in
+						PositionPopover(position: selection)
+							.padding()
+					}
 				.sheet(item: $selectedWaypoint) { selection in
 					WaypointForm(waypoint: selection)
 						.presentationDetents([.large]) // full screen
@@ -246,7 +352,25 @@ struct MeshMap: View {
 				}
 
 				.sheet(isPresented: $editingSettings) {
-					MapSettingsForm(traffic: $showTraffic, pointsOfInterest: $showPointsOfInterest, mapLayer: $selectedMapLayer, meshMap: $isMeshMap, enabledOverlayConfigs: $enabledOverlayConfigs)
+					MapSettingsForm(
+						traffic: $showTraffic,
+						pointsOfInterest: $showPointsOfInterest,
+						mapLayer: $selectedMapLayer,
+						meshMap: $isMeshMap,
+						enabledOverlayConfigs: $enabledOverlayConfigs,
+						visibleRegion: visibleRegion,
+						downloadSelection: $offlineDownloadSelection,
+						onOpenDownloadMap: startOfflineDownloadWorkflow
+					)
+				}
+				.sheet(isPresented: $showingOfflineDownloadConfiguration) {
+					OfflineMapDownloadConfigurationSheet(
+						isSelecting: $showingOfflineDownloadWorkflow,
+						mapLayer: $selectedMapLayer,
+						enableOfflineMaps: $enableOfflineMaps,
+						selection: offlineDownloadSelection,
+						visibleRegion: visibleRegion
+					)
 				}
 				.onChange(of: router.mapState) {
 					guard case .map = router.selectedTab else { return }
@@ -264,7 +388,9 @@ struct MeshMap: View {
 						UserDefaults.mapLayer = newMapLayer
 						mapStyle = MapStyle.imagery(elevation: .realistic)
 					case .offline:
-						return
+						UserDefaults.mapLayer = newMapLayer
+						enableOfflineMaps = true
+						UserDefaults.enableOfflineMaps = true
 					}
 				}
 				.sheet(isPresented: $editingFilters) {
@@ -283,40 +409,43 @@ struct MeshMap: View {
 						.presentationBackgroundInteraction(.enabled(upThrough: .medium))
 				}
 				.safeAreaInset(edge: .bottom, alignment: .trailing) {
-					HStack(spacing: 12) {
-						Spacer()
-						Button(action: {
-							withAnimation {
-								editingFilters = !editingFilters
+					if !showingOfflineDownloadWorkflow {
+						HStack(spacing: 12) {
+							Spacer()
+							Button(action: {
+								withAnimation {
+									editingFilters = !editingFilters
+								}
+							}) {
+								Image(systemName: filters.isFiltering ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
 							}
-						}) {
-							Image(systemName: filters.isFiltering ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
-						}
-						.accessibilityLabel(editingFilters ? "Hide node filters" : "Show node filters")
-						.accessibilityHint(editingFilters ? "Hides the node filter options." : "Shows the node filter options.")
-						.glassButtonStyle()
-						Button(action: {
-							withAnimation {
-								showLegend = !showLegend
+							.accessibilityLabel(editingFilters ? "Hide node filters" : "Show node filters")
+							.accessibilityHint(editingFilters ? "Hides the node filter options." : "Shows the node filter options.")
+							.glassButtonStyle()
+							Button(action: {
+								withAnimation {
+									showLegend = !showLegend
+								}
+							}) {
+								Image(systemName: showLegend ? "map.fill" : "map")
 							}
-						}) {
-							Image(systemName: showLegend ? "map.fill" : "map")
-						}
-						.accessibilityLabel(showLegend ? "Hide map legend" : "Show map legend")
-						.accessibilityHint(showLegend ? "Hides the map legend." : "Shows the map legend.")
-						.glassButtonStyle()
-						Button(action: {
-							withAnimation {
-								editingSettings = !editingSettings
+							.accessibilityLabel(showLegend ? "Hide map legend" : "Show map legend")
+							.accessibilityHint(showLegend ? "Hides the map legend." : "Shows the map legend.")
+							.glassButtonStyle()
+							Button(action: {
+								withAnimation {
+									editingSettings = !editingSettings
+								}
+							}) {
+								Image(systemName: editingSettings ? "info.circle.fill" : "info.circle")
 							}
-						}) {
-							Image(systemName: editingSettings ? "info.circle.fill" : "info.circle")
+							.glassButtonStyle()
 						}
-						.glassButtonStyle()
+						.mapScope(mapScope)
+						.controlSize(.regular)
+						.padding(.horizontal, 12)
+						.padding(.vertical, 8)
 					}
-					.controlSize(.regular)
-					.padding(.horizontal, 12)
-					.padding(.vertical, 8)
 				}
 			}
 			.toolbar {
@@ -397,6 +526,13 @@ struct MeshMap: View {
 		// One primary app window plus one detached window means > 1 attached scenes.
 		let attachedScenes = UIApplication.shared.connectedScenes.filter { $0.activationState != .unattached }
 		isMapWindowOpen = attachedScenes.count > 1
+	}
+
+	private func centerMapOnCurrentLocation() {
+		showUserLocation = true
+		if selectedMapLayer == .offline {
+			centerOnUserLocationRequest += 1
+		}
 	}
 
 	private var filterRefreshKey: Int64 {
@@ -537,6 +673,42 @@ struct MeshMap: View {
 				)
 			)
 		})
+	}
+
+	private func startOfflineDownloadWorkflow() {
+		withAnimation(.snappy) {
+			editingSettings = false
+			showLegend = false
+			enableOfflineMaps = true
+			UserDefaults.enableOfflineMaps = true
+			showingOfflineDownloadConfiguration = false
+			showingOfflineDownloadWorkflow = true
+		}
+	}
+
+	private var shouldShowOfflineMapAvailablePrompt: Bool {
+		offlineConnectivity.isOffline &&
+			selectedMapLayer != .offline &&
+			!showingOfflineDownloadWorkflow &&
+			!editingSettings &&
+			tileManager.hasUsableOfflineMapData
+	}
+
+	private func switchToAvailableOfflineMap() {
+		enableOfflineMaps = true
+		UserDefaults.enableOfflineMaps = true
+		if let style = tileManager.preferredOfflineStyle {
+			UserDefaults.offlineImportedTileSourceID = ""
+			UserDefaults.offlineMapUseVectorRenderer = true
+			UserDefaults.offlineVectorMapStyle = style
+		} else if let importID = tileManager.preferredRasterImportID {
+			UserDefaults.offlineImportedTileSourceID = importID
+			UserDefaults.offlineMapUseVectorRenderer = false
+		}
+		withAnimation(.snappy) {
+			selectedMapLayer = .offline
+			UserDefaults.mapLayer = .offline
+		}
 	}
 }
 

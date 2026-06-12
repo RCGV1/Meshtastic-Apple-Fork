@@ -11,7 +11,7 @@ import OSLog
 
 // The @MainActor annotation ensures that all state changes and UI updates happen on the main thread,
 // preventing potential race conditions and crashes related to UI updates from background threads.
-@MainActor class LocationsHandler: NSObject, ObservableObject, CLLocationManagerDelegate {
+@MainActor class LocationsHandler: NSObject, ObservableObject, @preconcurrency CLLocationManagerDelegate {
 
 	static let shared = LocationsHandler()  // Create a single, shared instance of the object.
 	public var manager = CLLocationManager()
@@ -30,6 +30,7 @@ import OSLog
 	@Published var elevationGain = 0.0
 	@Published var heading: Double = 0.0 // Current heading in degrees
 	@Published var headingUpdatesStarted: Bool = false // Track heading updates state
+	@Published private(set) var latestLocation: CLLocation?
 
 	@Published
 	var updatesStarted: Bool = UserDefaults.standard.bool(forKey: "liveUpdatesStarted") {
@@ -65,6 +66,10 @@ import OSLog
 		}
 		// Set flag to indicate a request is in progress
 		isRequestingPermission = true
+		defer {
+			self.isRequestingPermission = false
+			self.permissionContinuation = nil
+		}
 
 		return await withCheckedContinuation { continuation in
 			// Store the continuation.
@@ -94,15 +99,6 @@ import OSLog
 					Logger.services.error("💥 [App] Error in permission timeout task: \(error.localizedDescription, privacy: .public)")
 				}
 			}
-		}
-		// This defer block ensures `isRequestingPermission` is reset and `permissionContinuation` is nilled out
-		// regardless of how the `withCheckedContinuation` block exits (success, error, or cancellation).
-		// It acts as a final cleanup mechanism.
-		defer {
-			self.isRequestingPermission = false
-			// This nil assignment is somewhat redundant with the one in locationManagerDidChangeAuthorization
-			// and the timeout Task, but it provides an extra layer of safety.
-			self.permissionContinuation = nil
 		}
 	}
 
@@ -217,6 +213,15 @@ import OSLog
 			self.heading = newHeading.trueHeading >= 0 ? newHeading.trueHeading : newHeading.magneticHeading
 		}
 	}
+
+	func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+		guard let location = locations.last else { return }
+		_ = addLocation(location, smartPostion: enableSmartPosition)
+	}
+
+	func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+		Logger.services.warning("📍 [App] One-shot location request failed: \(error.localizedDescription, privacy: .public)")
+	}
 	
 	/// Stops receiving live location updates.
 	func stopLocationUpdates() {
@@ -242,6 +247,9 @@ import OSLog
 	///   - smartPostion: A boolean indicating whether to apply smart position filtering.
 	/// - Returns: `true` if the location was added, `false` if it was filtered out by smart position.
 	func addLocation(_ location: CLLocation, smartPostion: Bool) -> Bool {
+		if location.horizontalAccuracy >= 0 {
+			latestLocation = location
+		}
 		if smartPostion {
 			let age = -location.timestamp.timeIntervalSinceNow
 			if age > 10 {

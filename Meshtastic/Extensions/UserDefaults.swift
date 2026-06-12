@@ -60,9 +60,14 @@ extension UserDefaults {
 		case enableOfflineMaps
 		case enableMapShowFavorites
 		case mapTileServer
+		case offlineImportedTileSourceID
+		case offlineMapUseVectorRenderer
+		case offlineVectorMapStyle
 		case enableOverlayServer
 		case mapOverlayServer
 		case mapTilesAboveLabels
+		case offlineMapUse3DElevation
+		case nativeOSMRendererSourceMigration
 		case mapUseLegacy
 		case enableDetectionNotifications
 		case detectionSensorRole
@@ -131,8 +136,32 @@ extension UserDefaults {
 	@UserDefault(.enableMapPointsOfInterest, defaultValue: false)
 	static var enableMapPointsOfInterest: Bool
 
+	@UserDefault(.enableOfflineMaps, defaultValue: false)
+	static var enableOfflineMaps: Bool
+
 	@UserDefault(.enableMapShowFavorites, defaultValue: false)
 	static var enableMapShowFavorites: Bool
+
+	@UserDefault(.mapTileServer, defaultValue: .openStreetMap)
+	static var mapTileServer: MapTileServer
+
+	@UserDefault(.offlineImportedTileSourceID, defaultValue: "")
+	static var offlineImportedTileSourceID: String
+
+	@UserDefault(.offlineMapUseVectorRenderer, defaultValue: true)
+	static var offlineMapUseVectorRenderer: Bool
+
+	@UserDefault(.offlineVectorMapStyle, defaultValue: .liberty)
+	static var offlineVectorMapStyle: OfflineVectorMapStyle
+
+	@UserDefault(.mapTilesAboveLabels, defaultValue: false)
+	static var mapTilesAboveLabels: Bool
+
+	@UserDefault(.offlineMapUse3DElevation, defaultValue: false)
+	static var offlineMapUse3DElevation: Bool
+
+	@UserDefault(.nativeOSMRendererSourceMigration, defaultValue: false)
+	static var nativeOSMRendererSourceMigration: Bool
 
 	@UserDefault(.enableDetectionNotifications, defaultValue: false)
 	static var enableDetectionNotifications: Bool
@@ -225,6 +254,14 @@ extension UserDefaults {
 
 	@UserDefault(.lastFirmwareAPIUpdate, defaultValue: .distantPast)
 	static var lastFirmwareAPIUpdate: Date
+
+	static func migrateNativeOSMRendererSourceIfNeeded() {
+		guard !nativeOSMRendererSourceMigration else { return }
+		if !MapTileServer.offlineDownloadSources.contains(mapTileServer) {
+			mapTileServer = .openStreetMap
+		}
+		nativeOSMRendererSourceMigration = true
+	}
 }
 
 enum TestIntEnum: Int, Decodable {

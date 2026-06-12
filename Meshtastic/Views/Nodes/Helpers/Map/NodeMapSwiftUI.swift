@@ -35,9 +35,12 @@ struct NodeMapSwiftUI: View {
 
 	@Environment(\.modelContext) private var context
 	@EnvironmentObject var accessoryManager: AccessoryManager
+	@ObservedObject private var tileManager = OfflineTileManager.shared
+	@ObservedObject private var offlineConnectivity = OfflineMapConnectivityMonitor.shared
 	/// Parameters
 	@Bindable var node: NodeInfoEntity
 	@State var showUserLocation: Bool = false
+	@State private var showUserHeading = false
 	@State private var positions: [PositionEntity] = []
 	@State private var totalPositionCount = 0
 	@State private var mostRecentPosition: PositionEntity?
@@ -48,11 +51,13 @@ struct NodeMapSwiftUI: View {
 	@AppStorage("enableMapTraffic") private var showTraffic: Bool = false
 	@AppStorage("enableMapPointsOfInterest") private var showPointsOfInterest: Bool = false
 	@AppStorage("mapLayer") private var selectedMapLayer: MapLayer = .hybrid
+	@AppStorage("enableOfflineMaps") private var enableOfflineMaps = false
 	// Map Configuration
 	@Namespace var mapScope
 	@State var mapStyle: MapStyle = MapStyle.hybrid(elevation: .flat, pointsOfInterest: .all, showsTraffic: true)
 	@State var position = MapCameraPosition.automatic
 	@State var distance = 10000.0
+	@State private var visibleRegion: MKCoordinateRegion?
 	@State var scene: MKLookAroundScene?
 	@State var isLookingAround = false
 	@State var isShowingAltitude = false
@@ -60,6 +65,11 @@ struct NodeMapSwiftUI: View {
 	@State var isShowingLegend = false
 	@State var isMeshMap = false
 	@State var enabledOverlayConfigs: Set<UUID> = Set()
+	@State private var selectedPosition: PositionEntity?
+	@State private var centerOnUserLocationRequest = 0
+	@State private var offlineDownloadSelection = OfflineMapDownloadSelectionOverlay.defaultSelection
+	@State private var showingOfflineDownloadWorkflow = false
+	@State private var showingOfflineDownloadConfiguration = false
 
 	@State private var mapRegion = MKCoordinateRegion.init()
 
@@ -98,6 +108,51 @@ struct NodeMapSwiftUI: View {
 
 	private var configuredMap: some View {
 		baseMap
+			.overlay {
+				if selectedMapLayer == .offline {
+					OfflineNodeMapView(
+							node: node,
+							positions: positions,
+							showUserLocation: $showUserLocation,
+							showUserHeading: $showUserHeading,
+							showTraffic: $showTraffic,
+						showPointsOfInterest: $showPointsOfInterest,
+						visibleRegion: $visibleRegion,
+						selectedPosition: $selectedPosition,
+						centerOnUserLocationRequest: centerOnUserLocationRequest
+					)
+				}
+			}
+			.overlay {
+				if showingOfflineDownloadWorkflow {
+					OfflineMapDownloadSelectionOverlay(selection: $offlineDownloadSelection)
+						.ignoresSafeArea()
+						.transition(.opacity)
+				}
+			}
+			.overlay(alignment: .top) {
+				if showingOfflineDownloadWorkflow {
+					OfflineMapDownloadSelectionControls(
+						isSelecting: $showingOfflineDownloadWorkflow,
+						isConfiguring: $showingOfflineDownloadConfiguration,
+						selection: offlineDownloadSelection,
+						visibleRegion: visibleRegion
+					)
+					.transition(.move(edge: .top).combined(with: .opacity))
+				}
+			}
+			.overlay(alignment: .top) {
+				if shouldShowOfflineMapAvailablePrompt {
+					VStack {
+						OfflineMapAvailablePrompt {
+							switchToAvailableOfflineMap()
+						}
+						.padding(.top, 10)
+						Spacer()
+					}
+					.transition(.move(edge: .top).combined(with: .opacity))
+				}
+			}
 			.overlay(alignment: .bottom) {
 				lookAroundView
 			}
@@ -105,7 +160,29 @@ struct NodeMapSwiftUI: View {
 				altitudeView
 			}
 			.sheet(isPresented: $isEditingSettings) {
-				MapSettingsForm(traffic: $showTraffic, pointsOfInterest: $showPointsOfInterest, mapLayer: $selectedMapLayer, meshMap: $isMeshMap, enabledOverlayConfigs: $enabledOverlayConfigs)
+				MapSettingsForm(
+					traffic: $showTraffic,
+					pointsOfInterest: $showPointsOfInterest,
+					mapLayer: $selectedMapLayer,
+					meshMap: $isMeshMap,
+					enabledOverlayConfigs: $enabledOverlayConfigs,
+					visibleRegion: visibleRegion,
+					downloadSelection: $offlineDownloadSelection,
+					onOpenDownloadMap: startOfflineDownloadWorkflow
+				)
+			}
+			.sheet(isPresented: $showingOfflineDownloadConfiguration) {
+				OfflineMapDownloadConfigurationSheet(
+					isSelecting: $showingOfflineDownloadWorkflow,
+					mapLayer: $selectedMapLayer,
+					enableOfflineMaps: $enableOfflineMaps,
+					selection: offlineDownloadSelection,
+					visibleRegion: visibleRegion
+				)
+			}
+			.sheet(item: $selectedPosition) { selection in
+				PositionPopover(position: selection)
+					.padding()
 			}
 			.sheet(isPresented: $isShowingLegend) {
 				MapLegend(isMeshMap: false)
@@ -129,7 +206,9 @@ struct NodeMapSwiftUI: View {
 				refreshPositions()
 			}
 			.safeAreaInset(edge: .bottom, alignment: .trailing) {
-				controlButtons
+				if !showingOfflineDownloadWorkflow {
+					controlButtons
+				}
 			}
 			.onDisappear {
 				UIApplication.shared.isIdleTimerDisabled = false
@@ -151,18 +230,23 @@ struct NodeMapSwiftUI: View {
 		.mapScope(mapScope)
 		.mapStyle(mapStyle)
 		.mapControls {
-			MapScaleView(scope: mapScope)
-				.mapControlVisibility(.visible)
-			if showUserLocation {
+			if selectedMapLayer != .offline {
+				MapScaleView(scope: mapScope)
+					.mapControlVisibility(.visible)
 				MapUserLocationButton(scope: mapScope)
 					.mapControlVisibility(.visible)
+				MapPitchToggle(scope: mapScope)
+					.mapControlVisibility(.visible)
+				MapCompass(scope: mapScope)
+					.mapControlVisibility(.visible)
 			}
-			MapPitchToggle(scope: mapScope)
-				.mapControlVisibility(.visible)
-			MapCompass(scope: mapScope)
-				.mapControlVisibility(.visible)
 		}
 		.controlSize(.regular)
+		.opacity(selectedMapLayer == .offline ? 0 : 1)
+		.allowsHitTesting(selectedMapLayer != .offline)
+		.onMapCameraChange(frequency: .onEnd) { context in
+			visibleRegion = context.region
+		}
 		.transaction { $0.animation = nil }
 	}
 
@@ -188,10 +272,10 @@ struct NodeMapSwiftUI: View {
 		}
 	}
 
-	private var controlButtons: some View {
-		HStack {
-			Button(action: {
-				withAnimation {
+		private var controlButtons: some View {
+			HStack {
+				Button(action: {
+					withAnimation {
 					isShowingLegend = !isShowingLegend
 				}
 			}) {
@@ -234,6 +318,7 @@ struct NodeMapSwiftUI: View {
 				.glassButtonStyle()
 			}
 		}
+		.mapScope(mapScope)
 		.controlSize(.regular)
 		.padding(5)
 	}
@@ -248,7 +333,53 @@ struct NodeMapSwiftUI: View {
 		case .satellite:
 			mapStyle = MapStyle.imagery(elevation: .flat)
 		case .offline:
-			break
+			enableOfflineMaps = true
+			UserDefaults.enableOfflineMaps = true
+		}
+	}
+
+	private func startOfflineDownloadWorkflow() {
+		withAnimation(.snappy) {
+			isEditingSettings = false
+			isLookingAround = false
+			isShowingAltitude = false
+			isShowingLegend = false
+			enableOfflineMaps = true
+			UserDefaults.enableOfflineMaps = true
+			showingOfflineDownloadConfiguration = false
+			showingOfflineDownloadWorkflow = true
+		}
+	}
+
+	private var shouldShowOfflineMapAvailablePrompt: Bool {
+		offlineConnectivity.isOffline &&
+			selectedMapLayer != .offline &&
+			!showingOfflineDownloadWorkflow &&
+			!isEditingSettings &&
+			tileManager.hasUsableOfflineMapData
+	}
+
+	private func switchToAvailableOfflineMap() {
+		enableOfflineMaps = true
+		UserDefaults.enableOfflineMaps = true
+		if let style = tileManager.preferredOfflineStyle {
+			UserDefaults.offlineImportedTileSourceID = ""
+			UserDefaults.offlineMapUseVectorRenderer = true
+			UserDefaults.offlineVectorMapStyle = style
+		} else if let importID = tileManager.preferredRasterImportID {
+			UserDefaults.offlineImportedTileSourceID = importID
+			UserDefaults.offlineMapUseVectorRenderer = false
+		}
+		withAnimation(.snappy) {
+			selectedMapLayer = .offline
+			UserDefaults.mapLayer = .offline
+		}
+	}
+
+	private func centerMapOnCurrentLocation() {
+		showUserLocation = true
+		if selectedMapLayer == .offline {
+			centerOnUserLocationRequest += 1
 		}
 	}
 
