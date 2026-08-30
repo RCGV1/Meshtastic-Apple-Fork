@@ -18,6 +18,28 @@ struct MeshtasticChannelURLTests {
 		#expect(parsed.channelSet.loraConfig.hopLimit == 5)
 	}
 
+	@Test func generatedAddURLDoesNotSerializeLoraConfig() throws {
+		let url = try MeshtasticChannelURL.urlString(for: makeChannelSet(), addChannels: true)
+		let payload = try #require(URL(string: url)?.fragment)
+		let decoded = try ChannelSet(serializedBytes: #require(Data(base64Encoded: payload.base64urlToBase64())))
+
+		#expect(!decoded.hasLoraConfig)
+	}
+
+	@Test func generatedReplaceURLPreservesLoraConfig() throws {
+		let url = try MeshtasticChannelURL.urlString(for: makeChannelSet())
+		let payload = try #require(URL(string: url)?.fragment)
+		let decoded = try ChannelSet(serializedBytes: #require(Data(base64Encoded: payload.base64urlToBase64())))
+
+		#expect(decoded.hasLoraConfig)
+		#expect(decoded.loraConfig.hopLimit == 5)
+	}
+
+	@Test func channelQRModeUsesContractConsequenceCopy() {
+		#expect(ChannelQRMode.replace.consequence == "Selected channels will replace the connected radio's channel list. LoRa settings from the QR code will be applied.")
+		#expect(ChannelQRMode.add.consequence == "Selected channels will be appended to the connected radio. Existing channels and LoRa settings are preserved.")
+	}
+
 	// The channel URL written to NFC tags (ShareChannels -> NFCWriteButton) is the
 	// same MeshtasticChannelURL.urlString(for:addChannels:) output, so it must
 	// round-trip through parse in both replace and add modes.
@@ -115,6 +137,33 @@ struct MeshtasticChannelURLTests {
 	@Test func rejectsWrongHost() {
 		#expect(throws: (any Error).self) {
 			_ = try MeshtasticChannelURL.parse("https://example.com/e/#abc")
+		}
+	}
+
+	@Test func rejectsPayloadsLargerThan16KiBBeforeDecoding() {
+		let oversizedPayload = String(repeating: "a", count: 16 * 1_024 + 1)
+
+		do {
+			_ = try MeshtasticChannelURL.parse("https://meshtastic.org/e/#\(oversizedPayload)")
+			Issue.record("Oversized channel URLs must be rejected before decoding.")
+		} catch {
+			#expect(error.localizedDescription == "Channel link is too large.")
+		}
+	}
+
+	@Test func rejectsInsecureCredentialedAndCustomPortWebForms() throws {
+		let payload = try MeshtasticChannelURL.payloadString(for: makeChannelSet())
+		for value in [
+			"http://meshtastic.org/e/#\(payload)",
+			"ftp://meshtastic.org/e/#\(payload)",
+			"https://user@meshtastic.org/e/#\(payload)",
+			"https://meshtastic.org:8443/e/#\(payload)",
+			"meshtastic://user@e#\(payload)",
+			"meshtastic://e:8443#\(payload)"
+		] {
+			#expect(throws: MeshtasticChannelURL.ParseError.notChannelURL, "\(value) must be rejected") {
+				_ = try MeshtasticChannelURL.parse(value)
+			}
 		}
 	}
 

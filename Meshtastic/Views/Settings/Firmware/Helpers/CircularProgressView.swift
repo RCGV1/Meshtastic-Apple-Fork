@@ -19,7 +19,6 @@ struct CircularProgressView: View {
 	var errorColor: Color = .red
 	var percentageFontSize: CGFloat = 48.0
 	
-	// Changed to Optional, removed showSubtitle
 	var subtitleText: String?
 	
 	@State private var rotation: Double = 0
@@ -162,6 +161,10 @@ struct CircularProgressView: View {
 				Text(isIndeterminate && text == "Loading..." ? "Please wait" : text)
 					.font(.callout)
 					.foregroundColor(.secondary)
+					.multilineTextAlignment(.center)
+					.lineLimit(2)
+					.minimumScaleFactor(0.8)
+					.padding(.horizontal, 12)
 			}
 		}
 		.transition(.opacity)

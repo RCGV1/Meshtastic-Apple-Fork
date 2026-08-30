@@ -52,9 +52,25 @@ struct ShareChannels: View {
 	@State private var showingHelp = false
 
 	private var shareableChannels: [ChannelEntity] {
-		(node?.myInfo?.channels ?? [])
+		canonicalValidUniqueChannels(from: node?.myInfo?.channels ?? [])
 			.filter { $0.role > 0 }
-			.sorted { $0.index < $1.index }
+	}
+
+	private var channelQRMode: ChannelQRMode {
+		ChannelQRMode(addChannels: !replaceChannels)
+	}
+
+	private var includedChannelIndexes: Set<Int32> {
+		var indexes = Set<Int32>()
+		if includeChannel0 { indexes.insert(0) }
+		if includeChannel1 { indexes.insert(1) }
+		if includeChannel2 { indexes.insert(2) }
+		if includeChannel3 { indexes.insert(3) }
+		if includeChannel4 { indexes.insert(4) }
+		if includeChannel5 { indexes.insert(5) }
+		if includeChannel6 { indexes.insert(6) }
+		if includeChannel7 { indexes.insert(7) }
+		return indexes
 	}
 
 	var body: some View {
@@ -98,7 +114,7 @@ struct ShareChannels: View {
 							let qrImage = qrCodeImage.generateQRCode(from: channelsUrl)
 							VStack {
 								Toggle(isOn: $replaceChannels) {
-									Label(replaceChannels ? "Replace Channels" : "Add Channels", systemImage: replaceChannels ? "arrow.triangle.2.circlepath.circle" : "plus.app")
+									Label(channelQRMode.title, systemImage: channelQRMode.symbolName)
 								}
 								.toggleStyle(.button)
 								.buttonStyle(.bordered)
@@ -106,6 +122,12 @@ struct ShareChannels: View {
 								.controlSize(.large)
 								.padding(.top)
 								.padding(.bottom)
+
+								Text(channelQRMode.consequence)
+									.font(.callout)
+									.foregroundStyle(.secondary)
+									.multilineTextAlignment(.center)
+									.padding(.horizontal)
 
 								ShareLink("Share QR Code & Link",
 											item: Image(uiImage: qrImage),
@@ -277,55 +299,10 @@ struct ShareChannels: View {
 			return
 		}
 
-		for ch in node?.myInfo?.channels ?? [] where ch.role > 0 {
-			var includeChannel = false
-			switch ch.index {
-			case 0:
-				if includeChannel0 {
-					includeChannel = true
-				}
-			case 1:
-				if includeChannel1 {
-					includeChannel = true
-				}
-			case 2:
-				if includeChannel2 {
-					includeChannel = true
-				}
-			case 3:
-				if includeChannel3 {
-					includeChannel = true
-				}
-			case 4:
-				if includeChannel4 {
-					includeChannel = true
-				}
-			case 5:
-				if includeChannel5 {
-					includeChannel = true
-				}
-			case 6:
-				if includeChannel6 {
-					includeChannel = true
-				}
-			case 7:
-				if includeChannel7 {
-					includeChannel = true
-				}
-			default:
-				includeChannel = false
-			}
-
-			if includeChannel {
-				var channelSettings = ChannelSettings()
-				channelSettings.name = ch.name ?? ""
-				channelSettings.psk = ch.psk ?? Data()
-				channelSettings.id = UInt32(ch.id)
-				channelSettings.moduleSettings.positionPrecision = UInt32(ch.positionPrecision)
-				channelSettings.moduleSettings.isMuted = ch.mute
-				channelSet.settings.append(channelSettings)
-			}
-		}
+		channelSet.settings = channelSettingsForSharing(
+			from: node?.myInfo?.channels ?? [],
+			includedIndexes: includedChannelIndexes
+		)
 
 		guard !channelSet.settings.isEmpty else {
 			channelsUrl = ""

@@ -19,6 +19,7 @@
 		2C99DFD1FEA08461A9B0D104 /* DeviceHardware.json in Resources */ = {isa = PBXBuildFile; fileRef = C6BCC32505771F08628D70D7 /* DeviceHardware.json */; };
 		31188367797815C745AA63C5 /* docs in Resources */ = {isa = PBXBuildFile; fileRef = 6B3F64B089C3A398FEBE6C9C /* docs */; };
 		3233E2EC4CCC91360E23F283 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F17AFA19C2AAB3C3ADFB1E33 /* AppState.swift */; };
+		33007286B0A108FF6655CC25 /* MeshtasticProtobufs in Frameworks */ = {isa = PBXBuildFile; productRef = 69904575C8FBB8A536663F9E /* MeshtasticProtobufs */; };
 		3F091ECD7900D90169754B93 /* DatadogTrace in Frameworks */ = {isa = PBXBuildFile; productRef = 3E5E35695D4334FDDA3BE8F2 /* DatadogTrace */; };
 		40510578B699E4E44B9F1A70 /* WidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E4053FDE501FD7E0A02CEA8D /* WidgetsExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		4584CB8BEA4226A1154EB385 /* OfflineMapManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E531C14ABE7F1491959BBE3 /* OfflineMapManager.swift */; };
@@ -31,12 +32,15 @@
 		54D8BBD62304C5917AEE0C2B /* DatadogRUM in Frameworks */ = {isa = PBXBuildFile; productRef = E96998AD4B79F29AF1E2A6D2 /* DatadogRUM */; };
 		5631740093D563F017DA31D7 /* MeshtasticProtobufs in Frameworks */ = {isa = PBXBuildFile; productRef = 52CBDF2188BAF9E2FB8B10A1 /* MeshtasticProtobufs */; };
 		563422694131128F504A5E05 /* Color.swift in Sources */ = {isa = PBXBuildFile; fileRef = E94055F00D3E29383E92FF74 /* Color.swift */; };
+		597DA0CDA9930BC262A72FCA /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 26351F51CD01C94D8D82486A /* Localizable.xcstrings */; };
 		5C31297EDE4B7294ECE538F4 /* AppIconDebug.icon in Resources */ = {isa = PBXBuildFile; fileRef = 6D159B66B1877A7506D1AB20 /* AppIconDebug.icon */; };
 		62C11A4D1644062EAD31615F /* Settings.bundle in Resources */ = {isa = PBXBuildFile; fileRef = F15A1577564640951AD3EA40 /* Settings.bundle */; };
 		66EFBB4E473C796ACAFF58C2 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 6776764BA24154B603C76018 /* AppIcon.icon */; };
+		6742E3665676C65DDE17C453 /* Meshtastic.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 4C621B0715362CE25600901D /* Meshtastic.xcdatamodeld */; };
 		6CABB3DA5BDD75359320B657 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 985D21086E966D40C875F3CD /* InfoPlist.strings */; };
 		7443E9D2180568F2E62EDAB6 /* AppIcon_Ham.icon in Resources */ = {isa = PBXBuildFile; fileRef = DD9ED0AFED536B2EE5F32F23 /* AppIcon_Ham.icon */; };
 		78B74168A96E756F203F9D13 /* AppIcon_Chirpy.icon in Resources */ = {isa = PBXBuildFile; fileRef = DD8FE67D6F2C7F041F8E3C8C /* AppIcon_Chirpy.icon */; };
+		824834E7CD284E868BB3DDFF /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 26351F51CD01C94D8D82486A /* Localizable.xcstrings */; };
 		8DFCC830624F2D4607E87938 /* MBTilesArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = A82B439BEF9740A80E66097A /* MBTilesArchive.swift */; };
 		94F9F3199DB5429EBF21F9E9 /* Connection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0875C7B0694DBE671437CC1A /* Connection.swift */; };
 		977E69BC7382DA7EF386402F /* TCPConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FA5EE6E2E5628082C9CF53F /* TCPConnection.swift */; };
@@ -49,10 +53,12 @@
 		C435B3FDDC80FBF45F9D6CDB /* Certificates in Resources */ = {isa = PBXBuildFile; fileRef = 25BA43A8304E6CC120811070 /* Certificates */; };
 		C5B1D5B4B38940E115D61856 /* DatadogCore in Frameworks */ = {isa = PBXBuildFile; productRef = 680CA066D5A5ECD529461B91 /* DatadogCore */; };
 		C6148418734B3ADB2741CB8E /* PMTilesExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9297A8F3E4AAC1F74C05844 /* PMTilesExtractor.swift */; };
+		D8EAA0284C5F4F9CE9941A1D /* MeshtasticMessages.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 591BC4981F3D80C31349BEED /* MeshtasticMessages.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		ECF8A4938BAD87D6CD830F7A /* MeshtasticAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69F2AD74F4ECBF91E5BE6275 /* MeshtasticAppDelegate.swift */; };
 		EFEED2F4EF7D9B1BB657458A /* SwiftDraw in Frameworks */ = {isa = PBXBuildFile; productRef = 9D120B166CA191FC578A9978 /* SwiftDraw */; };
 		F05DFDBFD6588DFEB6AD621F /* MVTTools in Frameworks */ = {isa = PBXBuildFile; productRef = 4FB45004C563B59043C53EAA /* MVTTools */; };
 		F0F15E85A1D7193379E705C4 /* AppIcon_MPowered.icon in Resources */ = {isa = PBXBuildFile; fileRef = D744131C1600FC47CB596573 /* AppIcon_MPowered.icon */; };
+		F11D4AB6E3A799DEB883AC14 /* NodeDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 074A4F4A084E3897FDDE16FB /* NodeDiscovery.swift */; };
 		F494AA4C9783F0E204B12D62 /* DatadogCrashReporting in Frameworks */ = {isa = PBXBuildFile; productRef = 43547F7F6DDB3842969DA369 /* DatadogCrashReporting */; };
 		F8D2F62028A2A100CDB80F82 /* MeshtasticProtobufs in Frameworks */ = {isa = PBXBuildFile; productRef = 4AF5AACBB64F141EF02FC7DC /* MeshtasticProtobufs */; };
 		F8E5A8CEE6E96D5D53F6F851 /* Markdown in Frameworks */ = {isa = PBXBuildFile; productRef = C853ED2A7F391E6F315F93B3 /* Markdown */; };
@@ -68,12 +74,26 @@
 			remoteGlobalIDString = A2F1595BC848E48B138C58E1;
 			remoteInfo = WidgetsExtension;
 		};
+		1B5441E6472D077F86C7500B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B1FDE49A580C939ADB9E00CE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 731011765CF28FC65E45163E;
+			remoteInfo = "Meshtastic TV";
+		};
 		7641B817BB20E264D0A5E4E5 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = B1FDE49A580C939ADB9E00CE /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = C4BC64E061C609D15F5DFAF5;
 			remoteInfo = "Meshtastic Watch App";
+		};
+		7A8108924780106AB29B257B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B1FDE49A580C939ADB9E00CE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C92DCD5C1ED45374936973F2;
+			remoteInfo = MeshtasticMessages;
 		};
 		D28FD0EC2A7A271CF7A6C3A5 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -103,6 +123,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				40510578B699E4E44B9F1A70 /* WidgetsExtension.appex in Embed Foundation Extensions */,
+				D8EAA0284C5F4F9CE9941A1D /* MeshtasticMessages.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -110,6 +131,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		074A4F4A084E3897FDDE16FB /* NodeDiscovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NodeDiscovery.swift; path = "Meshtastic TV/Client/NodeDiscovery.swift"; sourceTree = "<group>"; };
 		0875C7B0694DBE671437CC1A /* Connection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Connection.swift; sourceTree = "<group>"; };
 		0AEAC3FF0190C3F8166D22E3 /* MeshtasticDataModelV 52.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "MeshtasticDataModelV 52.xcdatamodel"; sourceTree = "<group>"; };
 		0CC33262B2EA2E8463E8BE95 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -140,6 +162,7 @@
 		501F5088D80069913D776227 /* MeshtasticDataModelV16.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = MeshtasticDataModelV16.xcdatamodel; sourceTree = "<group>"; };
 		51F4C9C28187306ED7B971AA /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist; name = de; path = de.lproj/AppIntentVocabulary.plist; sourceTree = "<group>"; };
 		53E4E3191A93EDE5C8C08E1C /* MeshtasticTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = MeshtasticTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		591BC4981F3D80C31349BEED /* MeshtasticMessages.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = MeshtasticMessages.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		5927E5660D36A603597524F8 /* pt-BR */ = {isa = PBXFileReference; lastKnownFileType = text.plist; name = "pt-BR"; path = "pt-BR.lproj/AppIntentVocabulary.plist"; sourceTree = "<group>"; };
 		5BA3CC672324E58EF9DE407D /* MeshtasticDataModelV3.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = MeshtasticDataModelV3.xcdatamodel; sourceTree = "<group>"; };
 		5C2FBD422C4F7971B03CD973 /* MeshtasticDataModelV 35.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "MeshtasticDataModelV 35.xcdatamodel"; sourceTree = "<group>"; };
@@ -211,6 +234,7 @@
 		DD8FE67D6F2C7F041F8E3C8C /* AppIcon_Chirpy.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon_Chirpy.icon; sourceTree = "<group>"; };
 		DD9ED0AFED536B2EE5F32F23 /* AppIcon_Ham.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon_Ham.icon; sourceTree = "<group>"; };
 		E4053FDE501FD7E0A02CEA8D /* WidgetsExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = WidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E41F76E242AA58583D058626 /* Meshtastic TVUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = "Meshtastic TVUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		E4B18DB5D1945CE9ABE5A18D /* MeshtasticDataModelV 58.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "MeshtasticDataModelV 58.xcdatamodel"; sourceTree = "<group>"; };
 		E4FC9164DF840C79496963DD /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist; name = ru; path = ru.lproj/AppIntentVocabulary.plist; sourceTree = "<group>"; };
 		E81B359C631E51C6461AAE00 /* MeshtasticDataModelV12.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = MeshtasticDataModelV12.xcdatamodel; sourceTree = "<group>"; };
@@ -234,6 +258,14 @@
 				Info.plist,
 			);
 			target = 731011765CF28FC65E45163E /* Meshtastic TV */;
+		};
+		3C8F1EE5D00E3231DDB7391E /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				MeshtasticMessages.entitlements,
+			);
+			target = C92DCD5C1ED45374936973F2 /* MeshtasticMessages */;
 		};
 		60FB5122E93A45D014918572 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -416,6 +448,16 @@
 			path = Shared;
 			sourceTree = "<group>";
 		};
+		45E13146D2205510320B8EB5 /* MessageSharing */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			name = MessageSharing;
+			path = MessageSharing;
+			sourceTree = "<group>";
+		};
 		46D9EC9A9870D40B64CBD339 /* Accessory */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			explicitFileTypes = {
@@ -463,6 +505,15 @@
 			);
 			name = AppIntents;
 			path = AppIntents;
+			sourceTree = "<group>";
+		};
+		9AE441C6AC684B0738ED364A /* MeshtasticTVUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = MeshtasticTVUITests;
 			sourceTree = "<group>";
 		};
 		9F6D2EC582CAA968D897F796 /* Router */ = {
@@ -513,6 +564,18 @@
 			);
 			name = Views;
 			path = Views;
+			sourceTree = "<group>";
+		};
+		E9F0C0CD7E869D2F9CBD57E6 /* MeshtasticMessages */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				3C8F1EE5D00E3231DDB7391E /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = MeshtasticMessages;
 			sourceTree = "<group>";
 		};
 		EA229AC7C87CBBD64EC61AA1 /* Meshtastic TV */ = {
@@ -568,6 +631,14 @@
 			files = (
 				5631740093D563F017DA31D7 /* MeshtasticProtobufs in Frameworks */,
 				0D14B1F2EE824455A78690F8 /* MVTTools in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4BB31AB83115286F507D3C34 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				33007286B0A108FF6655CC25 /* MeshtasticProtobufs in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -627,12 +698,22 @@
 			path = Transports;
 			sourceTree = "<group>";
 		};
+		5A09511A8EFEB6219741EDDB /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				45E13146D2205510320B8EB5 /* MessageSharing */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
 		5D4AFA4225AF7D85EE343B80 /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				A127CADA4845100E1C10B022 /* Meshtastic TV.app */,
+				E41F76E242AA58583D058626 /* Meshtastic TVUITests.xctest */,
 				ADF6BAC3992D05079F77B35C /* Meshtastic Watch App.app */,
 				1A740EACFF7FA4000F22EF4E /* Meshtastic.app */,
+				591BC4981F3D80C31349BEED /* MeshtasticMessages.appex */,
 				53E4E3191A93EDE5C8C08E1C /* MeshtasticTests.xctest */,
 				E4053FDE501FD7E0A02CEA8D /* WidgetsExtension.appex */,
 			);
@@ -686,6 +767,14 @@
 			path = Map;
 			sourceTree = "<group>";
 		};
+		7CF5820C55D8305FCC1F8A13 /* TV Test Support */ = {
+			isa = PBXGroup;
+			children = (
+				074A4F4A084E3897FDDE16FB /* NodeDiscovery.swift */,
+			);
+			name = "TV Test Support";
+			sourceTree = "<group>";
+		};
 		8F644F7974EA8B14E77ED53A /* Packages */ = {
 			isa = PBXGroup;
 			children = (
@@ -734,10 +823,14 @@
 				68569A5CFCF946568B4E32C5 /* Meshtastic */,
 				EA229AC7C87CBBD64EC61AA1 /* Meshtastic TV */,
 				F0E2A06151AF30290D808624 /* Meshtastic Watch App */,
+				E9F0C0CD7E869D2F9CBD57E6 /* MeshtasticMessages */,
 				867FD80926C4A4286D635BAD /* MeshtasticTests */,
+				9AE441C6AC684B0738ED364A /* MeshtasticTVUITests */,
 				8F644F7974EA8B14E77ED53A /* Packages */,
 				F15A1577564640951AD3EA40 /* Settings.bundle */,
 				456E28D41A9B7B1788FEE0CD /* Shared */,
+				5A09511A8EFEB6219741EDDB /* Shared */,
+				7CF5820C55D8305FCC1F8A13 /* TV Test Support */,
 				0B1C4E352D6981242B97EF9C /* Widgets */,
 				5D4AFA4225AF7D85EE343B80 /* Products */,
 			);
@@ -881,6 +974,28 @@
 			productReference = E4053FDE501FD7E0A02CEA8D /* WidgetsExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		BD5F76AD88798DAA8768A6E5 /* Meshtastic TVUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7C51102928658E793C011B32 /* Build configuration list for PBXNativeTarget "Meshtastic TVUITests" */;
+			buildPhases = (
+				7FEF51F3B1F316789878D34C /* Sources */,
+				971BB3202E0215C375C16856 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0CC301424E6FD9865C42C128 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				9AE441C6AC684B0738ED364A /* MeshtasticTVUITests */,
+			);
+			name = "Meshtastic TVUITests";
+			packageProductDependencies = (
+			);
+			productName = "Meshtastic TVUITests";
+			productReference = E41F76E242AA58583D058626 /* Meshtastic TVUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		C4BC64E061C609D15F5DFAF5 /* Meshtastic Watch App */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = FF633447B3933E14C9042CFE /* Build configuration list for PBXNativeTarget "Meshtastic Watch App" */;
@@ -902,6 +1017,30 @@
 			productReference = ADF6BAC3992D05079F77B35C /* Meshtastic Watch App.app */;
 			productType = "com.apple.product-type.application";
 		};
+		C92DCD5C1ED45374936973F2 /* MeshtasticMessages */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7D3B21A7FC0C68D1588F03AF /* Build configuration list for PBXNativeTarget "MeshtasticMessages" */;
+			buildPhases = (
+				53548A3F502DE1133A26F8C0 /* Sources */,
+				4CCE173B387F8C7BC49804C6 /* Resources */,
+				4BB31AB83115286F507D3C34 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				E9F0C0CD7E869D2F9CBD57E6 /* MeshtasticMessages */,
+				45E13146D2205510320B8EB5 /* MessageSharing */,
+			);
+			name = MeshtasticMessages;
+			packageProductDependencies = (
+				69904575C8FBB8A536663F9E /* MeshtasticProtobufs */,
+			);
+			productName = MeshtasticMessages;
+			productReference = 591BC4981F3D80C31349BEED /* MeshtasticMessages.appex */;
+			productType = "com.apple.product-type.app-extension.messages";
+		};
 		FEF4168AE260CFE34C972EBB /* Meshtastic */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 63A955A9CB6FB8A135DC7D7B /* Build configuration list for PBXNativeTarget "Meshtastic" */;
@@ -917,6 +1056,7 @@
 			);
 			dependencies = (
 				9FFAEA9121B6A0A05F35FE59 /* PBXTargetDependency */,
+				EF933905B09CC60AA749AC97 /* PBXTargetDependency */,
 				9F8D08FE8C3920E29BC0C051 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
@@ -981,7 +1121,16 @@
 						DevelopmentTeam = GCH7VS5Y9R;
 						ProvisioningStyle = Automatic;
 					};
+					BD5F76AD88798DAA8768A6E5 = {
+						DevelopmentTeam = GCH7VS5Y9R;
+						ProvisioningStyle = Automatic;
+						TestTargetID = 731011765CF28FC65E45163E;
+					};
 					C4BC64E061C609D15F5DFAF5 = {
+						DevelopmentTeam = GCH7VS5Y9R;
+						ProvisioningStyle = Automatic;
+					};
+					C92DCD5C1ED45374936973F2 = {
 						DevelopmentTeam = GCH7VS5Y9R;
 						ProvisioningStyle = Automatic;
 					};
@@ -1035,15 +1184,32 @@
 			targets = (
 				FEF4168AE260CFE34C972EBB /* Meshtastic */,
 				A2F1595BC848E48B138C58E1 /* WidgetsExtension */,
+				C92DCD5C1ED45374936973F2 /* MeshtasticMessages */,
 				55AF3400F316106F54C5485F /* MeshtasticTests */,
 				C4BC64E061C609D15F5DFAF5 /* Meshtastic Watch App */,
 				731011765CF28FC65E45163E /* Meshtastic TV */,
+				BD5F76AD88798DAA8768A6E5 /* Meshtastic TVUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		10D31ADC03EA77B8648E37AA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4CCE173B387F8C7BC49804C6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				597DA0CDA9930BC262A72FCA /* Localizable.xcstrings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		971BB3202E0215C375C16856 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -1093,6 +1259,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				824834E7CD284E868BB3DDFF /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1113,6 +1280,7 @@
 				"$(SRCROOT)/Meshtastic Watch App",
 				"$(SRCROOT)/MeshtasticTests",
 				"$(SRCROOT)/MeshtasticUITests",
+				"$(SRCROOT)/MeshtasticMessages",
 				"$(SRCROOT)/Shared",
 				"$(SRCROOT)/Widgets",
 			);
@@ -1129,6 +1297,14 @@
 
 /* Begin PBXSourcesBuildPhase section */
 		1873C2316C2E9226EA6AE7C8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F11D4AB6E3A799DEB883AC14 /* NodeDiscovery.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		53548A3F502DE1133A26F8C0 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -1162,6 +1338,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7FEF51F3B1F316789878D34C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9B95112C9BAE16B951830AD3 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1174,6 +1357,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3233E2EC4CCC91360E23F283 /* AppState.swift in Sources */,
+				6742E3665676C65DDE17C453 /* Meshtastic.xcdatamodeld in Sources */,
 				252DC3E6757A4880B3F749E5 /* MeshtasticApp.swift in Sources */,
 				ECF8A4938BAD87D6CD830F7A /* MeshtasticAppDelegate.swift in Sources */,
 			);
@@ -1182,6 +1366,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		0CC301424E6FD9865C42C128 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 731011765CF28FC65E45163E /* Meshtastic TV */;
+			targetProxy = 1B5441E6472D077F86C7500B /* PBXContainerItemProxy */;
+		};
 		3A9A327DE34F907303E13AC7 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = FEF4168AE260CFE34C972EBB /* Meshtastic */;
@@ -1198,6 +1387,12 @@
 			platformFilter = ios;
 			target = A2F1595BC848E48B138C58E1 /* WidgetsExtension */;
 			targetProxy = 0C865737C7AD7739BD8C50B0 /* PBXContainerItemProxy */;
+		};
+		EF933905B09CC60AA749AC97 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = C92DCD5C1ED45374936973F2 /* MeshtasticMessages */;
+			targetProxy = 7A8108924780106AB29B257B /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1230,6 +1425,25 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		32D524754999BA9E27FF5ADC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = GCH7VS5Y9R;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = gvh.MeshtasticClient.TVUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_TARGET_NAME = "Meshtastic TV";
+				TVOS_DEPLOYMENT_TARGET = 17.0;
+			};
+			name = Release;
+		};
 		5554BC660DC627BF91EFBD63 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1435,7 +1649,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 2.7.19;
+				MARKETING_VERSION = 2.7.20;
 				PRODUCT_BUNDLE_IDENTIFIER = gvh.MeshtasticClient.Widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1448,6 +1662,40 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
+		};
+		8EE1842327F44BEC5CBA4505 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "iMessage App Icon";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CODE_SIGN_ENTITLEMENTS = MeshtasticMessages/MeshtasticMessages.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = GCH7VS5Y9R;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MeshtasticMessages/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Meshtastic;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.7.20;
+				PRODUCT_BUNDLE_IDENTIFIER = gvh.MeshtasticClient.Messages;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
 		};
 		9CF840CC351C401D1891A32F /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -1462,7 +1710,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.7.19;
+				MARKETING_VERSION = 2.7.20;
 				PRODUCT_BUNDLE_IDENTIFIER = gvh.MeshtasticClient;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = appletvos;
@@ -1487,7 +1735,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.7.19;
+				MARKETING_VERSION = 2.7.20;
 				PRODUCT_BUNDLE_IDENTIFIER = gvh.MeshtasticClient;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = appletvos;
@@ -1498,6 +1746,39 @@
 				TVOS_DEPLOYMENT_TARGET = 17.0;
 			};
 			name = Debug;
+		};
+		B179BFB4E26C8BB91C6AA55F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "iMessage App Icon";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CODE_SIGN_ENTITLEMENTS = MeshtasticMessages/MeshtasticMessages.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = GCH7VS5Y9R;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MeshtasticMessages/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Meshtastic;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.7.20;
+				PRODUCT_BUNDLE_IDENTIFIER = gvh.MeshtasticClient.Messages;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
 		};
 		C5CD95E6488D0FB0F90E2021 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -1520,7 +1801,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 2.7.19;
+				MARKETING_VERSION = 2.7.20;
 				PRODUCT_BUNDLE_IDENTIFIER = gvh.MeshtasticClient.Widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1555,7 +1836,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.7.19;
+				MARKETING_VERSION = 2.7.20;
 				PRODUCT_BUNDLE_IDENTIFIER = gvh.MeshtasticClient.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1565,6 +1846,25 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
 				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		D88DA2385F85DE1DAAB283C4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = GCH7VS5Y9R;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = gvh.MeshtasticClient.TVUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_TARGET_NAME = "Meshtastic TV";
+				TVOS_DEPLOYMENT_TARGET = 17.0;
 			};
 			name = Debug;
 		};
@@ -1589,7 +1889,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.7.19;
+				MARKETING_VERSION = 2.7.20;
 				PRODUCT_BUNDLE_IDENTIFIER = gvh.MeshtasticClient.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1636,7 +1936,7 @@
 					"@executable_path/Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 2.7.19;
+				MARKETING_VERSION = 2.7.20;
 				OTHER_LDFLAGS = (
 					"-weak_framework",
 					SwiftUI,
@@ -1686,7 +1986,7 @@
 					"@executable_path/Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 2.7.19;
+				MARKETING_VERSION = 2.7.20;
 				OTHER_LDFLAGS = (
 					"-weak_framework",
 					SwiftUI,
@@ -1727,6 +2027,24 @@
 			buildConfigurations = (
 				6936E75845F3455F2F8A83BA /* Debug */,
 				67E591654DF7A3F0BC045D06 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7C51102928658E793C011B32 /* Build configuration list for PBXNativeTarget "Meshtastic TVUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D88DA2385F85DE1DAAB283C4 /* Debug */,
+				32D524754999BA9E27FF5ADC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7D3B21A7FC0C68D1588F03AF /* Build configuration list for PBXNativeTarget "MeshtasticMessages" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8EE1842327F44BEC5CBA4505 /* Debug */,
+				B179BFB4E26C8BB91C6AA55F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -1822,7 +2140,7 @@
 			repositoryURL = "https://github.com/meshtastic/TAKPacket-SDK.git";
 			requirement = {
 				kind = upToNextMinorVersion;
-				minimumVersion = 0.5.1;
+				minimumVersion = 0.9.1;
 			};
 		};
 		EF8B64957FF0A454C2EE0FBB /* XCRemoteSwiftPackageReference "CocoaMQTT" */ = {
@@ -1868,6 +2186,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D4D6B3C078FD6A403FA6BA8D /* XCRemoteSwiftPackageReference "dd-sdk-ios" */;
 			productName = DatadogCore;
+		};
+		69904575C8FBB8A536663F9E /* MeshtasticProtobufs */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MeshtasticProtobufs;
 		};
 		7F3F27310C566077475C7105 /* DatadogLogs */ = {
 			isa = XCSwiftPackageProductDependency;

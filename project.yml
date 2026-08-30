@@ -24,7 +24,7 @@ packages:
     majorVersion: 4.16.0
   TAKPacket-SDK:
     url: https://github.com/meshtastic/TAKPacket-SDK.git
-    minorVersion: 0.5.1
+    minorVersion: 0.9.1
   CocoaMQTT:
     url: https://github.com/emqx/CocoaMQTT
     majorVersion: 2.0.0
@@ -288,8 +288,13 @@ targets:
         type: folder
       - path: "Localizable.xcstrings"
       - path: "Settings.bundle"
+      # Must be compiled into Meshtastic.momd and land in the bundle: the Core Data ->
+      # SwiftData migration loads it from Bundle.main at launch for anyone upgrading
+      # (CoreDataMigrationService, called from Persistence). buildPhase: none left it in
+      # the project tree but in no build phase, so no momd shipped and the migration
+      # bailed out. Guarded by CoreDataMigrationServiceTests.
       - path: "Meshtastic/Meshtastic.xcdatamodeld"
-        buildPhase: none
+        buildPhase: sources
       - path: "Meshtastic"
         type: group
         includes:
@@ -299,6 +304,9 @@ targets:
       # embeds: a Mac Catalyst build must not embed watchOS/iOS-only content
       # ("built for macOS but contains embedded content built for watchOS").
       - target: WidgetsExtension
+        embed: true
+        platformFilter: iOS
+      - target: MeshtasticMessages
         embed: true
         platformFilter: iOS
       - target: "Meshtastic Watch App"
@@ -352,6 +360,7 @@ targets:
           - "$(SRCROOT)/Meshtastic Watch App"
           - "$(SRCROOT)/MeshtasticTests"
           - "$(SRCROOT)/MeshtasticUITests"
+          - "$(SRCROOT)/MeshtasticMessages"
           - "$(SRCROOT)/Shared"
           - "$(SRCROOT)/Widgets"
         basedOnDependencyAnalysis: false
@@ -388,7 +397,7 @@ targets:
             - "$(inherited)"
             - "@executable_path/Frameworks"
           MACOSX_DEPLOYMENT_TARGET: "14.6"
-          MARKETING_VERSION: "2.7.19"
+          MARKETING_VERSION: "2.7.20"
           OTHER_LDFLAGS:
             - "-weak_framework"
             - "SwiftUI"
@@ -431,7 +440,7 @@ targets:
             - "$(inherited)"
             - "@executable_path/Frameworks"
           MACOSX_DEPLOYMENT_TARGET: "14.6"
-          MARKETING_VERSION: "2.7.19"
+          MARKETING_VERSION: "2.7.20"
           OTHER_LDFLAGS:
             - "-weak_framework"
             - "SwiftUI"
@@ -477,7 +486,7 @@ targets:
             - "@executable_path/Frameworks"
             - "@executable_path/../../Frameworks"
           MACOSX_DEPLOYMENT_TARGET: "14.6"
-          MARKETING_VERSION: "2.7.19"
+          MARKETING_VERSION: "2.7.20"
           PRODUCT_BUNDLE_IDENTIFIER: "gvh.MeshtasticClient.Widgets"
           PRODUCT_NAME: "$(TARGET_NAME)"
           PROVISIONING_PROFILE_SPECIFIER: ""
@@ -506,7 +515,7 @@ targets:
             - "@executable_path/Frameworks"
             - "@executable_path/../../Frameworks"
           MACOSX_DEPLOYMENT_TARGET: "14.6"
-          MARKETING_VERSION: "2.7.19"
+          MARKETING_VERSION: "2.7.20"
           PRODUCT_BUNDLE_IDENTIFIER: "gvh.MeshtasticClient.Widgets"
           PRODUCT_NAME: "$(TARGET_NAME)"
           PROVISIONING_PROFILE_SPECIFIER: ""
@@ -518,12 +527,88 @@ targets:
           SWIFT_VERSION: "5.0"
           TARGETED_DEVICE_FAMILY: "1,2"
 
+  MeshtasticMessages:
+    type: app-extension.messages
+    platform: iOS
+    sources:
+      - path: "Shared/MessageSharing"
+        type: syncedFolder
+      - path: "MeshtasticMessages"
+        type: syncedFolder
+        excludes:
+          - "Info.plist"
+          - "MeshtasticMessages.entitlements"
+      - path: "Localizable.xcstrings"
+    dependencies:
+      - package: MeshtasticProtobufs
+        product: MeshtasticProtobufs
+    settings:
+      configs:
+        Debug:
+          APPLICATION_EXTENSION_API_ONLY: "YES"
+          ASSETCATALOG_COMPILER_APPICON_NAME: "iMessage App Icon"
+          CLANG_CXX_LANGUAGE_STANDARD: "gnu++20"
+          CODE_SIGN_ENTITLEMENTS: "MeshtasticMessages/MeshtasticMessages.entitlements"
+          CODE_SIGN_IDENTITY: "Apple Development"
+          CODE_SIGN_STYLE: "Automatic"
+          CURRENT_PROJECT_VERSION: "1"
+          DEVELOPMENT_TEAM: "GCH7VS5Y9R"
+          GENERATE_INFOPLIST_FILE: "YES"
+          INFOPLIST_FILE: "MeshtasticMessages/Info.plist"
+          INFOPLIST_KEY_CFBundleDisplayName: "Meshtastic"
+          IPHONEOS_DEPLOYMENT_TARGET: "17.5"
+          LD_RUNPATH_SEARCH_PATHS:
+            - "$(inherited)"
+            - "@executable_path/Frameworks"
+            - "@executable_path/../../Frameworks"
+          MARKETING_VERSION: "2.7.20"
+          PRODUCT_BUNDLE_IDENTIFIER: "gvh.MeshtasticClient.Messages"
+          PRODUCT_NAME: "$(TARGET_NAME)"
+          SKIP_INSTALL: "YES"
+          SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
+          SUPPORTS_MACCATALYST: "NO"
+          SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: "NO"
+          SWIFT_EMIT_LOC_STRINGS: "YES"
+          SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+          SWIFT_VERSION: "5.0"
+          TARGETED_DEVICE_FAMILY: "1,2"
+        Release:
+          APPLICATION_EXTENSION_API_ONLY: "YES"
+          ASSETCATALOG_COMPILER_APPICON_NAME: "iMessage App Icon"
+          CLANG_CXX_LANGUAGE_STANDARD: "gnu++20"
+          CODE_SIGN_ENTITLEMENTS: "MeshtasticMessages/MeshtasticMessages.entitlements"
+          CODE_SIGN_IDENTITY: "Apple Development"
+          CODE_SIGN_STYLE: "Automatic"
+          CURRENT_PROJECT_VERSION: "1"
+          DEVELOPMENT_TEAM: "GCH7VS5Y9R"
+          GENERATE_INFOPLIST_FILE: "YES"
+          INFOPLIST_FILE: "MeshtasticMessages/Info.plist"
+          INFOPLIST_KEY_CFBundleDisplayName: "Meshtastic"
+          IPHONEOS_DEPLOYMENT_TARGET: "17.5"
+          LD_RUNPATH_SEARCH_PATHS:
+            - "$(inherited)"
+            - "@executable_path/Frameworks"
+            - "@executable_path/../../Frameworks"
+          MARKETING_VERSION: "2.7.20"
+          PRODUCT_BUNDLE_IDENTIFIER: "gvh.MeshtasticClient.Messages"
+          PRODUCT_NAME: "$(TARGET_NAME)"
+          SKIP_INSTALL: "YES"
+          SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
+          SUPPORTS_MACCATALYST: "NO"
+          SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: "NO"
+          SWIFT_EMIT_LOC_STRINGS: "YES"
+          SWIFT_VERSION: "5.0"
+          TARGETED_DEVICE_FAMILY: "1,2"
+
   MeshtasticTests:
     type: bundle.unit-test
     platform: iOS
     sources:
       - path: "MeshtasticTests"
         type: syncedFolder
+      # Compile the pure Bonjour lifecycle into the existing test bundle; keep this file iOS-compatible.
+      - path: "Meshtastic TV/Client/NodeDiscovery.swift"
+        group: "TV Test Support"
     dependencies:
       - target: Meshtastic
     settings:
@@ -598,7 +683,7 @@ targets:
           LD_RUNPATH_SEARCH_PATHS:
             - "$(inherited)"
             - "@executable_path/Frameworks"
-          MARKETING_VERSION: "2.7.19"
+          MARKETING_VERSION: "2.7.20"
           PRODUCT_BUNDLE_IDENTIFIER: "gvh.MeshtasticClient.watchkitapp"
           PRODUCT_NAME: "$(TARGET_NAME)"
           SDKROOT: "watchos"
@@ -626,7 +711,7 @@ targets:
           LD_RUNPATH_SEARCH_PATHS:
             - "$(inherited)"
             - "@executable_path/Frameworks"
-          MARKETING_VERSION: "2.7.19"
+          MARKETING_VERSION: "2.7.20"
           PRODUCT_BUNDLE_IDENTIFIER: "gvh.MeshtasticClient.watchkitapp"
           PRODUCT_NAME: "$(TARGET_NAME)"
           SDKROOT: "watchos"
@@ -646,6 +731,7 @@ targets:
         type: syncedFolder
         excludes:
           - "Info.plist"
+      - path: "Localizable.xcstrings"
       # Reused portable transport primitives (Network.framework only, no UIKit/BLE/CoreLocation).
       # Explicit files rather than the whole Accessory folder so we do NOT pull in the
       # BLE/AccessoryManager/persistence stack. AccessoryError + NONCE_* are shimmed locally
@@ -686,7 +772,7 @@ targets:
           LD_RUNPATH_SEARCH_PATHS:
             - "$(inherited)"
             - "@executable_path/Frameworks"
-          MARKETING_VERSION: "2.7.19"
+          MARKETING_VERSION: "2.7.20"
           PRODUCT_BUNDLE_IDENTIFIER: "gvh.MeshtasticClient"
           PRODUCT_NAME: "$(TARGET_NAME)"
           SDKROOT: "appletvos"
@@ -705,12 +791,49 @@ targets:
           LD_RUNPATH_SEARCH_PATHS:
             - "$(inherited)"
             - "@executable_path/Frameworks"
-          MARKETING_VERSION: "2.7.19"
+          MARKETING_VERSION: "2.7.20"
           PRODUCT_BUNDLE_IDENTIFIER: "gvh.MeshtasticClient"
           PRODUCT_NAME: "$(TARGET_NAME)"
           SDKROOT: "appletvos"
           SUPPORTED_PLATFORMS: "appletvos appletvsimulator"
           SWIFT_EMIT_LOC_STRINGS: "YES"
+          SWIFT_VERSION: "5.0"
+          TARGETED_DEVICE_FAMILY: "3"
+          TVOS_DEPLOYMENT_TARGET: "17.0"
+
+  "Meshtastic TVUITests":
+    type: bundle.ui-testing
+    platform: tvOS
+    sources:
+      - path: "MeshtasticTVUITests"
+        type: syncedFolder
+    dependencies:
+      - target: "Meshtastic TV"
+    settings:
+      configs:
+        Debug:
+          CODE_SIGN_STYLE: "Automatic"
+          CURRENT_PROJECT_VERSION: "1"
+          DEVELOPMENT_TEAM: "GCH7VS5Y9R"
+          GENERATE_INFOPLIST_FILE: "YES"
+          MARKETING_VERSION: "1.0"
+          PRODUCT_BUNDLE_IDENTIFIER: "gvh.MeshtasticClient.TVUITests"
+          PRODUCT_NAME: "$(TARGET_NAME)"
+          SDKROOT: "appletvos"
+          SUPPORTED_PLATFORMS: "appletvos appletvsimulator"
+          SWIFT_VERSION: "5.0"
+          TARGETED_DEVICE_FAMILY: "3"
+          TVOS_DEPLOYMENT_TARGET: "17.0"
+        Release:
+          CODE_SIGN_STYLE: "Automatic"
+          CURRENT_PROJECT_VERSION: "1"
+          DEVELOPMENT_TEAM: "GCH7VS5Y9R"
+          GENERATE_INFOPLIST_FILE: "YES"
+          MARKETING_VERSION: "1.0"
+          PRODUCT_BUNDLE_IDENTIFIER: "gvh.MeshtasticClient.TVUITests"
+          PRODUCT_NAME: "$(TARGET_NAME)"
+          SDKROOT: "appletvos"
+          SUPPORTED_PLATFORMS: "appletvos appletvsimulator"
           SWIFT_VERSION: "5.0"
           TARGETED_DEVICE_FAMILY: "3"
           TVOS_DEPLOYMENT_TARGET: "17.0"
@@ -769,10 +892,13 @@ schemes:
     build:
       targets:
         "Meshtastic TV": all
+        "Meshtastic TVUITests": [test]
     run:
       config: Debug
     test:
       config: Debug
+      targets:
+        - "Meshtastic TVUITests"
     profile:
       config: Release
     analyze:
@@ -805,4 +931,3 @@ schemes:
       config: Debug
     archive:
       config: Release
-

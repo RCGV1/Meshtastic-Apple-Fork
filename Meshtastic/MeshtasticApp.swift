@@ -98,6 +98,10 @@ struct MeshtasticAppleApp: App {
 			// Disable expensive continuous monitoring to reduce idle CPU (~15% savings)
 			rumConfig.longTaskThreshold = nil  // Disables LongTaskObserver CFRunLoop hook
 			rumConfig.vitalsUpdateFrequency = nil    // Disables VitalRefreshRateReader display link
+			// Report main-thread hangs over 2s as RUM errors with stacks. Unlike the long-task
+			// observer this is a lightweight watchdog thread, and without it hang reports are
+			// invisible — users report them by word of mouth and Datadog shows nothing.
+			rumConfig.appHangThreshold = 2
 			RUM.enable(with: rumConfig)
 
 		}
@@ -262,6 +266,10 @@ struct MeshtasticAppleApp: App {
 			case .background:
 				Logger.services.info("🎬 [App] Scene is in the background")
 				accessoryManager.appDidEnterBackground()
+				// Entity-cap evictions run now, while no view is mid-render on the
+				// doomed entities. Foregrounded, the packet actor defers them.
+				MeshPackets.appIsActive = false
+				Task { await MeshPackets.shared.enforceEntityCapsAndSave() }
 				do {
 					try persistenceController.container.mainContext.save()
 					Logger.services.info("💾 [App] Saved SwiftData context when the app went to the background.")
@@ -274,6 +282,7 @@ struct MeshtasticAppleApp: App {
 				Logger.services.info("🎬 [App] Scene is inactive")
 			case .active:
 				Logger.services.info("🎬 [App] Scene is active")
+				MeshPackets.appIsActive = true
 				accessoryManager.appDidBecomeActive()
 				appState.refreshBadgeCount(context: persistenceController.container.mainContext)
 			@unknown default:
@@ -385,7 +394,6 @@ struct MeshtasticAppleApp: App {
 						Self.hasConfiguredTips = true
 						try? Tips.configure(
 							[
-								// Reset which tips have been shown and what parameters have been tracked, useful during testing and for this sample project
 								.datastoreLocation(.applicationDefault),
 								// When should the tips be presented? If you use .immediate, they'll all be presented whenever a screen with a tip appears.
 								// You can adjust this on per tip level as well

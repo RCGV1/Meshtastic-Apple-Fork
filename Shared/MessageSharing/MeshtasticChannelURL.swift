@@ -8,6 +8,51 @@
 import Foundation
 import MeshtasticProtobufs
 
+enum ChannelQRMode: Sendable {
+	case replace
+	case add
+
+	init(addChannels: Bool) {
+		self = addChannels ? .add : .replace
+	}
+
+	var title: String {
+		switch self {
+		case .replace:
+			return String(localized: "Replace Channels")
+		case .add:
+			return String(localized: "Add Channels")
+		}
+	}
+
+	var pickerTitle: String {
+		switch self {
+		case .replace:
+			return String(localized: "Replace")
+		case .add:
+			return String(localized: "Add")
+		}
+	}
+
+	var symbolName: String {
+		switch self {
+		case .replace:
+			return "arrow.triangle.2.circlepath.circle"
+		case .add:
+			return "plus.app"
+		}
+	}
+
+	var consequence: String {
+		switch self {
+		case .replace:
+			return String(localized: "Selected channels will replace the connected radio's channel list. LoRa settings from the QR code will be applied.")
+		case .add:
+			return String(localized: "Selected channels will be appended to the connected radio. Existing channels and LoRa settings are preserved.")
+		}
+	}
+}
+
 // MARK: - MeshtasticChannelURL
 
 struct MeshtasticChannelURL: Sendable {
@@ -18,6 +63,7 @@ struct MeshtasticChannelURL: Sendable {
 	static let appScheme = "meshtastic"
 	static let channelPathSegment = "e"
 	static let canonicalPrefix = "https://meshtastic.org/e/"
+	static let maximumPayloadCharacters = 16 * 1_024
 
 	// MARK: - Properties
 
@@ -31,6 +77,7 @@ struct MeshtasticChannelURL: Sendable {
 		case empty
 		case notChannelURL
 		case missingPayload
+		case payloadTooLarge
 		case invalidBase64
 		case invalidChannelSet
 
@@ -42,6 +89,8 @@ struct MeshtasticChannelURL: Sendable {
 				return "This is not a Meshtastic channel link."
 			case .missingPayload:
 				return "Channel link is missing channel data."
+			case .payloadTooLarge:
+				return "Channel link is too large."
 			case .invalidBase64:
 				return "Channel link contains invalid channel data."
 			case .invalidChannelSet:
@@ -74,7 +123,11 @@ struct MeshtasticChannelURL: Sendable {
 	// MARK: - URL Helpers
 
 	static func urlString(for channelSet: ChannelSet, addChannels: Bool = false) throws -> String {
-		let encodedPayload = try payloadString(for: channelSet)
+		var payloadChannelSet = channelSet
+		if addChannels {
+			payloadChannelSet.clearLoraConfig()
+		}
+		let encodedPayload = try payloadString(for: payloadChannelSet)
 		let query = addChannels ? "?add=true" : ""
 		return "\(canonicalPrefix)\(query)#\(encodedPayload)"
 	}
@@ -84,7 +137,7 @@ struct MeshtasticChannelURL: Sendable {
 	}
 
 	static func payloadString(for channelSet: ChannelSet) throws -> String {
-		try channelSet.serializedData().base64EncodedString().base64ToBase64url()
+		urlSafeBase64(try channelSet.serializedData().base64EncodedString())
 	}
 
 	// MARK: - Parsing Helpers
@@ -113,6 +166,9 @@ struct MeshtasticChannelURL: Sendable {
 	}
 
 	private static func isChannelURL(_ url: URL) -> Bool {
+		guard url.user == nil, url.password == nil, url.port == nil else {
+			return false
+		}
 		if url.scheme?.lowercased() == appScheme {
 			let pathSegments = pathSegments(for: url)
 			if url.host == nil {
@@ -122,7 +178,9 @@ struct MeshtasticChannelURL: Sendable {
 		}
 
 		let supportedHosts = [Self.host, "www.\(Self.host)"]
-		guard let host = url.host?.lowercased(), supportedHosts.contains(host) else { return false }
+		guard url.scheme?.lowercased() == "https",
+			  let host = url.host?.lowercased(),
+			  supportedHosts.contains(host) else { return false }
 		return pathSegments(for: url) == [channelPathSegment]
 	}
 
@@ -160,7 +218,10 @@ struct MeshtasticChannelURL: Sendable {
 	// MARK: - Decoding Helpers
 
 	private static func decodeChannelSet(payload: String) throws -> ChannelSet {
-		let decodedString = payload.base64urlToBase64()
+		guard payload.utf8.count <= maximumPayloadCharacters else {
+			throw ParseError.payloadTooLarge
+		}
+		let decodedString = paddedBase64(payload)
 		guard let decodedData = Data(base64Encoded: decodedString) else {
 			throw ParseError.invalidBase64
 		}
@@ -170,5 +231,22 @@ struct MeshtasticChannelURL: Sendable {
 		} catch {
 			throw ParseError.invalidChannelSet
 		}
+	}
+
+	private static func urlSafeBase64(_ value: String) -> String {
+		value
+			.replacingOccurrences(of: "+", with: "-")
+			.replacingOccurrences(of: "/", with: "_")
+			.replacingOccurrences(of: "=", with: "")
+	}
+
+	private static func paddedBase64(_ value: String) -> String {
+		var result = value
+			.replacingOccurrences(of: "-", with: "+")
+			.replacingOccurrences(of: "_", with: "/")
+		if result.count % 4 != 0 {
+			result.append(String(repeating: "=", count: 4 - result.count % 4))
+		}
+		return result
 	}
 }
